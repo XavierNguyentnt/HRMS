@@ -1,32 +1,23 @@
-# Bỏ qua các thư viện được cài đặt, có thể cài lại bằng `npm install`
-node_modules/
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# Bỏ qua các file build/production
-# Thư mục này được tạo tự động khi bạn build dự án
-build/
-dist/
-.out/
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
 
-# Bỏ qua các file log
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# testing
+/coverage
 
-# Bỏ qua các file môi trường (rất quan trọng!)
-# Các file này chứa thông tin nhạy cảm, API keys, mật khẩu...
-.env
+# production
+/build
+
+# misc
+.DS_Store
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-# Bỏ qua các file do hệ điều hành hoặc trình soạn thảo code tạo ra
-.vscode/
-.idea/
-.DS_Store
-Thumbs.db
-
-# Bỏ qua thư mục test coverage
-coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
