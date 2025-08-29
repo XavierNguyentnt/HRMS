@@ -1,0 +1,28 @@
+.auth-wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.auth-wrapper .card {
+  border-radius: 15px;
+  transition: all 0.3s ease-in-out;
+}
+
+.auth-wrapper .card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.12) !important;
+}
+
+.auth-wrapper .form-control-lg {
+  font-size: 1rem;
+  padding: 0.75rem 1.25rem;
+}
+
+.auth-wrapper .btn-lg {
+  padding: 0.75rem 1.25rem;
+  font-size: 1.1rem;
+  font-weight: bold;
+}

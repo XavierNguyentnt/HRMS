@@ -1,17 +1,11 @@
-const BASE = process.env.REACT_APP_API_BASE_URL;
 const URL = {
-  // AUTHENTICATION
-  AUTH_LOGIN: "/api/web/session/authenticate", // Endpoint JSON-RPC của Odoo
+  // THÊM /api/ VÀO ĐÂY
+  AUTH_LOGIN: "/api/web/session/authenticate",
+  AUTH_SIGNUP: "/api/auth/signup",
 
-  // API V1
-  API_TEST: BASE + "/api/v1/test",
-
-  // -- PARTNERS --
-  API_PARTNERS: BASE + "/api/v1/partners",
-
-  // -- TASKS --
-  API_TASKS: BASE + "/api/v1/tasks",
-  // Dùng hàm để tạo URL động cho các task có ID
+  API_TEST: "/api/v1/test",
+  API_PARTNERS: "/api/v1/partners",
+  API_TASKS: "/api/v1/tasks",
   API_TASK_DETAIL: (id) => `/api/v1/tasks/${id}`,
 };
 

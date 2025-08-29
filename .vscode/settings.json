@@ -1,3 +1,4 @@
 {
-  "cSpell.words": ["keepalive", "Odoo", "sendfile"]
+  "cSpell.words": ["jsonrequest", "keepalive", "Odoo", "sendfile"],
+  "CodeGPT.apiKey": "Anthropic"
 }

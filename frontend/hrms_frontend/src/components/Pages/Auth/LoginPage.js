@@ -1,59 +1,99 @@
 import React, { useState } from "react";
 import { useAuth } from "../../../contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+import {
+  Container,
+  Row,
+  Col,
+  Card,
+  Form,
+  Button,
+  Spinner,
+  Alert,
+} from "react-bootstrap";
+import "./AuthPages.css"; // File CSS tùy chỉnh để giao diện đẹp hơn
 
 function LoginPage() {
-  const [identifier, setIdentifier] = useState("admin"); // Có thể đặt giá trị mặc định để test
-  const [password, setPassword] = useState("admin"); // Có thể đặt giá trị mặc định để test
-
-  // Lấy state và hàm từ Context. `error` giờ đã chứa thông báo lỗi chi tiết.
+  const [identifier, setIdentifier] = useState("admin");
+  const [password, setPassword] = useState("admin");
   const { handleLogin, isLoading, error } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     const sessionInfo = await handleLogin(identifier, password);
-
-    // Nếu đăng nhập thành công, sessionInfo sẽ có giá trị
     if (sessionInfo) {
-      // Điều hướng đến trang dashboard hoặc trang chính
-      navigate("/dashboard");
+      navigate("/dashboard"); // Điều hướng đến trang chính sau khi thành công
     }
   };
 
   return (
-    <div className="login-container">
-      <h2>Đăng nhập</h2>
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="identifier">Email hoặc username</label>
-          <input
-            type="text"
-            id="identifier"
-            value={identifier}
-            onChange={(e) => setIdentifier(e.target.value)}
-            placeholder="Email hoặc username"
-            required
-            autoFocus
-          />
-        </div>
-        <div className="form-group">
-          <label htmlFor="password">Mật khẩu</label>
-          <input
-            type="password"
-            id="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </div>
+    <div className="auth-wrapper">
+      <Container className="d-flex align-items-center justify-content-center">
+        <Row className="justify-content-center w-100">
+          <Col md={6} lg={5} xl={4}>
+            <Card className="shadow-lg border-0">
+              <Card.Body className="p-4 p-sm-5">
+                <h2 className="text-center mb-4 fw-bold">Đăng nhập</h2>
+                <Form onSubmit={handleSubmit}>
+                  <Form.Group className="mb-3" controlId="identifier">
+                    <Form.Label>Email hoặc Tên đăng nhập</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={identifier}
+                      onChange={(e) => setIdentifier(e.target.value)}
+                      placeholder="Nhập email của bạn"
+                      required
+                      autoFocus
+                      size="lg"
+                    />
+                  </Form.Group>
 
-        {error && <p className="error-message">{error}</p>}
+                  <Form.Group className="mb-3" controlId="password">
+                    <Form.Label>Mật khẩu</Form.Label>
+                    <Form.Control
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Nhập mật khẩu"
+                      required
+                      size="lg"
+                    />
+                  </Form.Group>
 
-        <button type="submit" disabled={isLoading}>
-          {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
-        </button>
-      </form>
+                  {error && <Alert variant="danger">{error}</Alert>}
+
+                  <div className="d-grid mt-4">
+                    <Button
+                      variant="primary"
+                      type="submit"
+                      disabled={isLoading}
+                      size="lg">
+                      {isLoading ? (
+                        <>
+                          <Spinner
+                            as="span"
+                            animation="border"
+                            size="sm"
+                            role="status"
+                            aria-hidden="true"
+                          />
+                          <span className="ms-2">Đang xử lý...</span>
+                        </>
+                      ) : (
+                        "Đăng nhập"
+                      )}
+                    </Button>
+                  </div>
+                </Form>
+                <div className="mt-4 text-center">
+                  Chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link>
+                </div>
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+      </Container>
     </div>
   );
 }

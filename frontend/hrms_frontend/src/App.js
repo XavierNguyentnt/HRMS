@@ -1,8 +1,10 @@
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
-import LoginPage from "./components/Pages/Auth/LoginPage"; // Giả sử LoginPage nằm ở src/components
-import DashboardPage from "./components/Pages/Dashboards/DashboardPage"; // Import trang Dashboard vừa tạo
+import LoginPage from "./components/Pages/Auth/LoginPage";
+import RegisterPage from "./components/Pages/Auth/RegisterPage";
+import ProfilePage from "./components/Pages/User/ProfilePage";
+import DashboardPage from "./components/Pages/Dashboards/DashboardPage";
 
 function App() {
   const { user } = useAuth();
@@ -14,6 +16,18 @@ function App() {
         <Route
           path="/login"
           element={user ? <Navigate to="/dashboard" /> : <LoginPage />}
+        />
+
+        {/* SỬA LỖI: Dùng <Route> thay vì <Routes> */}
+        <Route
+          path="/register"
+          element={user ? <Navigate to="/dashboard" /> : <RegisterPage />}
+        />
+
+        {/* Route này có thể cần được bảo vệ */}
+        <Route
+          path="/profile"
+          element={user ? <ProfilePage /> : <Navigate to="/login" />}
         />
 
         {/* Route cho trang Dashboard (Được bảo vệ) */}
