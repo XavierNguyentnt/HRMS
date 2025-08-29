@@ -1,7 +1,7 @@
 const BASE = process.env.REACT_APP_API_BASE_URL;
 const URL = {
   // AUTHENTICATION
-  AUTH_LOGIN: BASE + "/web/session/authenticate", // Endpoint JSON-RPC của Odoo
+  AUTH_LOGIN: "/api/web/session/authenticate", // Endpoint JSON-RPC của Odoo
 
   // API V1
   API_TEST: BASE + "/api/v1/test",
