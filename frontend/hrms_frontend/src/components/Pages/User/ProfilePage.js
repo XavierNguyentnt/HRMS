@@ -3,12 +3,13 @@ import {
   Container,
   Row,
   Col,
-  Card,
   Form,
   Button,
   Image,
+  Tabs, // Dùng để tạo notebook
+  Tab, // Dùng để tạo các page
+  Card,
   Spinner,
-  Alert,
 } from "react-bootstrap";
 import { useAuth } from "../../../contexts/AuthContext";
 
@@ -26,200 +27,441 @@ const fileToBase64 = (file) =>
   });
 
 function ProfilePage() {
-  const {
-    user,
-    handleUpdateProfile,
-    isUpdateLoading,
-    updateError,
-    updateSuccess,
-  } = useAuth();
-
+  const { user, updateUserProfile } = useAuth(); // Lấy user từ context
+  const [profileData, setProfileData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({ name: "" });
-  const [profileImageFile, setProfileImageFile] = useState(null); // Lưu File object
-  const [previewImage, setPreviewImage] = useState("/default-avatar.png"); // URL để hiển thị
 
   useEffect(() => {
+    // Khi component được tải, nếu có user, set data cho form
     if (user) {
-      setFormData({
-        name: user.name || "",
-      });
-      // Odoo trả về ảnh dưới dạng base64 trong trường image_1920 (hoặc image_128, etc.)
-      if (user.image_1920) {
-        setPreviewImage(`data:image/jpeg;base64,${user.image_1920}`);
-      } else {
-        setPreviewImage("/default-avatar.png");
-      }
+      setProfileData(user); // Dữ liệu từ context đã chứa đủ thông tin
+      setIsLoading(false);
     }
   }, [user]);
 
   const handleInputChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setProfileData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleImageChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setProfileImageFile(file); // Lưu file object để chuyển đổi sau
-      setPreviewImage(URL.createObjectURL(file)); // Tạo URL tạm thời để xem trước
-    }
+  const handleSave = () => {
+    // Gọi API để lưu thay đổi
+    updateUserProfile(profileData);
+    setIsEditing(false);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    // Tạo một object JSON để gửi đi, không dùng FormData nữa
-    const updatePayload = {
-      name: formData.name,
-    };
-
-    // Nếu người dùng có chọn ảnh mới, chuyển nó sang base64
-    if (profileImageFile) {
-      try {
-        const base64Image = await fileToBase64(profileImageFile);
-        // Tên trường ảnh trong Odoo thường là image_1920, image_1024, etc.
-        updatePayload.image_1920 = base64Image;
-      } catch (error) {
-        console.error("Lỗi chuyển đổi file sang base64:", error);
-        // Bạn có thể hiển thị lỗi này cho người dùng nếu cần
-        return;
-      }
-    }
-
-    // Gọi hàm từ context với userId và payload JSON
-    const success = await handleUpdateProfile(user.uid, updatePayload);
-    if (success) {
-      setIsEditing(false); // Tắt chế độ chỉnh sửa nếu thành công
-      setProfileImageFile(null); // Reset file đã chọn
-    }
+  const handleCancel = () => {
+    setProfileData(user); // Khôi phục lại dữ liệu gốc
+    setIsEditing(false);
   };
 
-  if (!user) {
-    return (
-      <Container className="d-flex justify-content-center align-items-center vh-100">
-        <Spinner animation="border" />
-      </Container>
-    );
+  if (isLoading) {
+    return <Spinner animation="border" />;
   }
 
+  // Lấy ra quyền sửa đổi từ API
+  const canEdit = profileData?.can_edit || false;
   return (
-    <Container className="py-5">
-      <Row className="justify-content-center">
-        <Col lg={8} xl={7}>
-          <Card className="shadow-sm">
-            <Card.Header as="h4">Thông tin cá nhân</Card.Header>
-            <Card.Body>
-              <Form onSubmit={handleSubmit}>
-                <Row className="align-items-center">
-                  <Col md={4} className="text-center mb-4 mb-md-0">
-                    <Image
-                      src={previewImage}
-                      roundedCircle
-                      fluid
-                      style={{
-                        width: "150px",
-                        height: "150px",
-                        objectFit: "cover",
-                        border: "3px solid #dee2e6",
-                      }}
-                    />
-                    {isEditing && (
-                      <Form.Group controlId="formFile" className="mt-3">
-                        <Form.Control
-                          type="file"
-                          onChange={handleImageChange}
-                          accept="image/*"
-                        />
-                      </Form.Group>
-                    )}
-                  </Col>
-                  <Col md={8}>
-                    <Form.Group className="mb-3" controlId="profileName">
-                      <Form.Label>Họ và Tên</Form.Label>
-                      <Form.Control
-                        type="text"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        disabled={!isEditing}
-                        size="lg"
-                      />
-                    </Form.Group>
-                    <Form.Group className="mb-3" controlId="profileEmail">
-                      <Form.Label>Email</Form.Label>
+    <Container className="my-4">
+      <Card>
+        <Card.Body>
+          {/* VÙNG THÔNG TIN CHÍNH */}
+          <Row className="mb-4 align-items-center">
+            <Col md={3} className="text-center">
+              <Image
+                src={
+                  profileData.image_1920
+                    ? `data:image/jpeg;base64,${profileData.image_1920}`
+                    : "/default-avatar.png"
+                }
+                roundedCircle
+                fluid
+                style={{ maxWidth: "150px", border: "3px solid #eee" }}
+              />
+            </Col>
+            <Col md={9}>
+              <Form.Group>
+                <Form.Control
+                  size="lg"
+                  type="text"
+                  name="name"
+                  value={profileData?.name || ""}
+                  readOnly={!isEditing || !canEdit}
+                  className="h1 bg-transparent border-0 ps-0"
+                />
+              </Form.Group>
+              <Form.Group>
+                <Form.Control
+                  type="text"
+                  placeholder="Chức danh"
+                  name="job_title"
+                  value={profileData.job_title || ""}
+                  readOnly={!isEditing || !canEdit}
+                  className="bg-transparent border-0 ps-0 text-muted fs-4"
+                />
+              </Form.Group>
+            </Col>
+          </Row>
+
+          {/* Dùng Tabs để thay thế <notebook> */}
+          <Tabs defaultActiveKey="work_info" id="profile-tabs" className="mb-3">
+            {/* Tab 1: Thay thế <page name="public"> */}
+            <Tab eventKey="work_info" title="Thông tin công việc">
+              <Form>
+                <Row>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Email công việc</Form.Label>
                       <Form.Control
                         type="email"
-                        name="email"
-                        value={user.email || user.login || ""}
-                        disabled // Email thường không cho phép thay đổi
-                        size="lg"
+                        value={profileData.work_email || ""}
+                        readOnly
+                      />
+                    </Form.Group>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Phòng ban</Form.Label>
+                      {/* Xử lý trường quan hệ: hiển thị tên */}
+                      <Form.Control
+                        type="text"
+                        value={
+                          profileData.department_id
+                            ? profileData.department_id[1]
+                            : ""
+                        }
+                        readOnly
+                      />
+                    </Form.Group>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Người quản lý</Form.Label>
+                      <Form.Control
+                        type="text"
+                        value={
+                          profileData.employee_parent_id
+                            ? profileData.employee_parent_id[1]
+                            : ""
+                        }
+                        readOnly
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Điện thoại cơ quan</Form.Label>
+                      <Form.Control
+                        type="text"
+                        name="work_phone"
+                        value={profileData.work_phone || ""}
+                        readOnly={!isEditing || !canEdit}
+                      />
+                    </Form.Group>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Số di động công việc</Form.Label>
+                      <Form.Control
+                        type="text"
+                        name="mobile_phone"
+                        value={profileData.mobile_phone || ""}
+                        readOnly={!isEditing || !canEdit}
+                      />
+                    </Form.Group>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Địa chỉ nơi làm việc</Form.Label>
+                      <Form.Control
+                        type="text"
+                        name="work_location_id"
+                        value={
+                          profileData.work_location_id
+                            ? profileData.work_location_id[1]
+                            : ""
+                        }
+                        readOnly // <-- Trường này thường không cho sửa trực tiếp, mà là chọn từ danh sách
                       />
                     </Form.Group>
                   </Col>
                 </Row>
-
-                <hr />
-
-                {/* Hiển thị thông báo thành công hoặc lỗi */}
-                {updateSuccess && (
-                  <Alert
-                    variant="success"
-                    onClose={() => {
-                      /* logic to hide alert */
-                    }}
-                    dismissible>
-                    Cập nhật thông tin thành công!
-                  </Alert>
-                )}
-                {updateError && (
-                  <Alert
-                    variant="danger"
-                    onClose={() => {
-                      /* logic to hide alert */
-                    }}
-                    dismissible>
-                    {updateError}
-                  </Alert>
-                )}
-
-                <div className="text-end">
-                  {isEditing ? (
-                    <>
-                      <Button
-                        variant="secondary"
-                        onClick={() => setIsEditing(false)}
-                        className="me-2">
-                        Hủy
-                      </Button>
-                      <Button
-                        variant="primary"
-                        type="submit"
-                        disabled={isUpdateLoading}>
-                        {isUpdateLoading ? (
-                          <Spinner
-                            as="span"
-                            size="sm"
-                            role="status"
-                            aria-hidden="true"
-                          />
-                        ) : (
-                          "Lưu thay đổi"
-                        )}
-                      </Button>
-                    </>
-                  ) : (
-                    <Button
-                      variant="outline-primary"
-                      onClick={() => setIsEditing(true)}>
-                      Chỉnh sửa thông tin
-                    </Button>
-                  )}
-                </div>
               </Form>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
+            </Tab>
+
+            <Tab eventKey="private_info" title="Thông Tin Cá Nhân">
+              <Form>
+                <Row>
+                  {/* CỘT BÊN TRÁI */}
+                  <Col md={6}>
+                    <h5 className="mt-3 mb-3">Địa chỉ & Liên lạc</h5>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Địa chỉ</Form.Label>
+                      <Form.Control
+                        type="text"
+                        name="private_street"
+                        value={profileData.private_street || ""}
+                        onChange={handleInputChange}
+                        readOnly={!isEditing || !canEdit}
+                      />
+                    </Form.Group>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Địa chỉ 2</Form.Label>
+                      <Form.Control
+                        type="text"
+                        name="private_street2"
+                        value={profileData.private_street2 || ""}
+                        onChange={handleInputChange}
+                        readOnly={!isEditing || !canEdit}
+                      />
+                    </Form.Group>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Thành phố</Form.Label>
+                      <Form.Control
+                        type="text"
+                        name="private_city"
+                        value={profileData.private_city || ""}
+                        onChange={handleInputChange}
+                        readOnly={!isEditing || !canEdit}
+                      />
+                    </Form.Group>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Email Cá Nhân</Form.Label>
+                      <Form.Control
+                        type="email"
+                        name="private_email"
+                        value={profileData.private_email || ""}
+                        onChange={handleInputChange}
+                        readOnly={!isEditing || !canEdit}
+                      />
+                    </Form.Group>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Điện Thoại Cá Nhân</Form.Label>
+                      <Form.Control
+                        type="text"
+                        name="private_phone"
+                        value={profileData.private_phone || ""}
+                        onChange={handleInputChange}
+                        readOnly={!isEditing || !canEdit}
+                      />
+                    </Form.Group>
+
+                    <h5 className="mt-4 mb-3">Liên Hệ Khẩn Cấp</h5>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Tên Người Liên Hệ</Form.Label>
+                      <Form.Control
+                        type="text"
+                        name="emergency_contact"
+                        value={profileData.emergency_contact || ""}
+                        onChange={handleInputChange}
+                        readOnly={!isEditing || !canEdit}
+                      />
+                    </Form.Group>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Số Điện Thoại Khẩn Cấp</Form.Label>
+                      <Form.Control
+                        type="text"
+                        name="emergency_phone"
+                        value={profileData.emergency_phone || ""}
+                        onChange={handleInputChange}
+                        readOnly={!isEditing || !canEdit}
+                      />
+                    </Form.Group>
+                  </Col>
+
+                  {/* CỘT BÊN PHẢI */}
+                  <Col md={6}>
+                    <h5 className="mt-3 mb-3">Thông Tin Thân Nhân & Học Vấn</h5>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Quốc Tịch</Form.Label>
+                      {/* Trường quan hệ Many2one, tạm thời hiển thị tên và không cho sửa */}
+                      <Form.Control
+                        type="text"
+                        value={
+                          profileData.employee_country_id
+                            ? profileData.employee_country_id[1]
+                            : ""
+                        }
+                        readOnly
+                      />
+                    </Form.Group>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Số CMND/CCCD</Form.Label>
+                      <Form.Control
+                        type="text"
+                        name="identification_id"
+                        value={profileData.identification_id || ""}
+                        onChange={handleInputChange}
+                        readOnly={!isEditing || !canEdit}
+                      />
+                    </Form.Group>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Giới Tính</Form.Label>
+                      <Form.Select
+                        name="gender"
+                        value={profileData.gender || ""}
+                        onChange={handleInputChange}
+                        disabled={!isEditing || !canEdit}>
+                        <option value="">-- Chọn --</option>
+                        <option value="male">Nam</option>
+                        <option value="female">Nữ</option>
+                        <option value="other">Khác</option>
+                      </Form.Select>
+                    </Form.Group>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Ngày Sinh</Form.Label>
+                      <Form.Control
+                        type="date"
+                        name="birthday"
+                        value={profileData.birthday || ""}
+                        onChange={handleInputChange}
+                        readOnly={!isEditing || !canEdit}
+                      />
+                    </Form.Group>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Tình Trạng Hôn Nhân</Form.Label>
+                      <Form.Select
+                        name="marital"
+                        value={profileData.marital || ""}
+                        onChange={handleInputChange}
+                        disabled={!isEditing || !canEdit}>
+                        <option value="">-- Chọn --</option>
+                        <option value="single">Độc thân</option>
+                        <option value="married">Đã kết hôn</option>
+                        <option value="cohabitant">Sống chung</option>
+                        <option value="widower">Góa</option>
+                        <option value="divorced">Ly dị</option>
+                      </Form.Select>
+                    </Form.Group>
+
+                    {/* Logic ẩn/hiện dựa trên state */}
+                    {(profileData.marital === "married" ||
+                      profileData.marital === "cohabitant") && (
+                      <Form.Group className="mb-3">
+                        <Form.Label>Họ Tên Vợ/Chồng</Form.Label>
+                        <Form.Control
+                          type="text"
+                          name="spouse_complete_name"
+                          value={profileData.spouse_complete_name || ""}
+                          onChange={handleInputChange}
+                          readOnly={!isEditing || !canEdit}
+                        />
+                      </Form.Group>
+                    )}
+                    <Form.Group className="mb-3">
+                      <Form.Label>Bằng Cấp</Form.Label>
+                      <Form.Select
+                        name="certificate"
+                        value={profileData.certificate || ""}
+                        onChange={handleInputChange}
+                        disabled={!isEditing || !canEdit}>
+                        <option value="">-- Chọn --</option>
+                        <option value="graduate">Tốt nghiệp Phổ thông</option>
+                        <option value="bachelor">Cử nhân</option>
+                        <option value="master">Thạc sĩ</option>
+                        <option value="doctor">Tiến sĩ</option>
+                        <option value="other">Khác</option>
+                      </Form.Select>
+                    </Form.Group>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Lĩnh Vực Học</Form.Label>
+                      <Form.Control
+                        type="text"
+                        name="study_field"
+                        value={profileData.study_field || ""}
+                        onChange={handleInputChange}
+                        readOnly={!isEditing || !canEdit}
+                      />
+                    </Form.Group>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Trường Học</Form.Label>
+                      <Form.Control
+                        type="text"
+                        name="study_school"
+                        value={profileData.study_school || ""}
+                        onChange={handleInputChange}
+                        readOnly={!isEditing || !canEdit}
+                      />
+                    </Form.Group>
+                  </Col>
+                </Row>
+              </Form>
+            </Tab>
+
+            {/* Tab 3: Thay thế <page name="hr_settings"> */}
+            <Tab eventKey="hr_settings" title="Cài Đặt Nhân Sự">
+              <Form>
+                <Row>
+                  {/* CỘT BÊN TRÁI: STATUS */}
+                  <Col md={6}>
+                    <h5 className="mt-3 mb-3">Trạng Thái</h5>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Loại nhân viên</Form.Label>
+                      <Form.Select
+                        name="employee_type"
+                        value={profileData.employee_type || ""}
+                        onChange={handleInputChange}
+                        disabled={!isEditing || !canEdit}>
+                        <option value="">-- Chọn --</option>
+                        <option value="employee">Nhân viên</option>
+                        <option value="contractor">
+                          Nhà thầu (Contractor)
+                        </option>
+                        <option value="freelancer">
+                          Làm việc tự do (Freelancer)
+                        </option>
+                        <option value="intern">Thực tập sinh</option>
+                      </Form.Select>
+                    </Form.Group>
+                  </Col>
+
+                  {/* CỘT BÊN PHẢI: ATTENDANCE */}
+                  <Col md={6}>
+                    <h5 className="mt-3 mb-3">Chấm Công</h5>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Mã PIN</Form.Label>
+                      <Form.Control
+                        type="text"
+                        name="pin"
+                        placeholder="Mã PIN để chấm công"
+                        value={profileData.pin || ""}
+                        onChange={handleInputChange}
+                        readOnly={!isEditing || !canEdit}
+                      />
+                    </Form.Group>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Mã Vạch</Form.Label>
+                      <Form.Control
+                        type="text"
+                        name="barcode"
+                        placeholder="Mã vạch định danh nhân viên"
+                        value={profileData.barcode || ""}
+                        onChange={handleInputChange}
+                        readOnly={!isEditing || !canEdit}
+                      />
+                    </Form.Group>
+                  </Col>
+                </Row>
+              </Form>
+            </Tab>
+          </Tabs>
+
+          {/* Nút bấm điều khiển */}
+          <div className="text-end mt-4">
+            {canEdit && !isEditing && (
+              <Button variant="primary" onClick={() => setIsEditing(true)}>
+                Chỉnh Sửa
+              </Button>
+            )}
+            {canEdit && isEditing && (
+              <>
+                <Button
+                  variant="secondary"
+                  className="me-2"
+                  onClick={handleCancel}>
+                  Hủy
+                </Button>
+                <Button variant="success" onClick={handleSave}>
+                  Lưu Thay Đổi
+                </Button>
+              </>
+            )}
+          </div>
+        </Card.Body>
+      </Card>
     </Container>
   );
 }
