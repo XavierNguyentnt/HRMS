@@ -1,10 +1,29 @@
 import React from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+// Thêm 'Outlet' từ react-router-dom
+import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
+
+// Import các component
+import Header from "./components/Pages/Commons/Header";
 import LoginPage from "./components/Pages/Auth/LoginPage";
 import RegisterPage from "./components/Pages/Auth/RegisterPage";
 import ProfilePage from "./components/Pages/User/ProfilePage";
 import DashboardPage from "./components/Pages/Dashboards/DashboardPage";
+
+// =================================================================
+// Component Layout chính: Render Header và nội dung các trang con
+// =================================================================
+const MainLayout = () => {
+  return (
+    <>
+      <Header />
+      <main className="container py-4">
+        {/* <Outlet /> là nơi các component con (Dashboard, Profile) sẽ được render */}
+        <Outlet />
+      </main>
+    </>
+  );
+};
 
 function App() {
   const { user } = useAuth();
@@ -12,36 +31,40 @@ function App() {
   return (
     <div className="App">
       <Routes>
-        {/* Route cho trang đăng nhập */}
+        {/* ================================================================= */}
+        {/* CÁC ROUTE CÔNG KHAI (KHÔNG CÓ HEADER) */}
+        {/* ================================================================= */}
         <Route
           path="/login"
           element={user ? <Navigate to="/dashboard" /> : <LoginPage />}
         />
-
-        {/* SỬA LỖI: Dùng <Route> thay vì <Routes> */}
         <Route
           path="/register"
           element={user ? <Navigate to="/dashboard" /> : <RegisterPage />}
         />
 
-        {/* Route này có thể cần được bảo vệ */}
+        {/* ================================================================= */}
+        {/* CÁC ROUTE ĐƯỢC BẢO VỆ (SỬ DỤNG MAINLAYOUT VÀ CÓ HEADER) */}
+        {/* ================================================================= */}
         <Route
-          path="/profile"
-          element={user ? <ProfilePage /> : <Navigate to="/login" />}
-        />
+          path="/"
+          element={user ? <MainLayout /> : <Navigate to="/login" />}>
+          {/* Các route con này sẽ được render bên trong <Outlet /> của MainLayout */}
+          <Route path="dashboard" element={<DashboardPage />} />
+          <Route path="profile" element={<ProfilePage />} />
 
-        {/* Route cho trang Dashboard (Được bảo vệ) */}
-        <Route
-          path="/dashboard"
-          element={user ? <DashboardPage /> : <Navigate to="/login" />}
-        />
+          {/* Khi cần thêm trang mới có Header, chỉ cần thêm vào đây:
+            <Route path="projects" element={<ProjectsPage />} /> 
+          */}
 
-        {/* Route mặc định: điều hướng về đúng trang */}
+          {/* Route mặc định khi đã đăng nhập */}
+          <Route index element={<Navigate to="/dashboard" />} />
+        </Route>
+
+        {/* Route bắt lỗi 404 hoặc điều hướng người lạ */}
         <Route
           path="*"
-          element={
-            user ? <Navigate to="/dashboard" /> : <Navigate to="/login" />
-          }
+          element={<Navigate to={user ? "/dashboard" : "/login"} />}
         />
       </Routes>
     </div>
