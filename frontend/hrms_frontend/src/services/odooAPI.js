@@ -54,6 +54,7 @@ const PROFILE_FIELDS = [
   "pin",
   "barcode",
   "image_1920",
+  "employee_skill_ids",
   // "can_edit", // Trường quan trọng để kiểm soát quyền sửa
 ];
 
@@ -178,5 +179,41 @@ export const updateProfile = async (employeeId, updateData) => {
       throw new Error(error.response.data.error.data.message);
     }
     throw new Error(error.message || "Đã xảy ra lỗi khi cập nhật thông tin.");
+  }
+};
+
+/**
+ * THÊM HÀM MỚI
+ * Lấy thông tin chi tiết các kỹ năng của nhân viên từ danh sách ID.
+ * @param {number[]} skill_ids - Mảng chứa các ID của hr.employee.skill
+ * @returns {Promise<Array>} - Mảng các đối tượng kỹ năng chi tiết
+ */
+export const fetchEmployeeSkills = async (skill_ids) => {
+  if (!skill_ids || skill_ids.length === 0) {
+    return []; // Trả về mảng rỗng nếu không có ID nào
+  }
+  const params = {
+    model: "hr.employee.skill", // Model chứa thông tin chi tiết kỹ năng
+    method: "read", // Dùng 'read' để lấy chi tiết từ ID
+    args: [
+      skill_ids,
+      ["id", "skill_id", "skill_level_id", "skill_type_id", "level_progress"], // Các trường cần lấy
+    ],
+    kwargs: {},
+  };
+  try {
+    const response = await axiosInstance.post(URL.RPC_CALL, {
+      jsonrpc: "2.0",
+      params,
+    });
+    if (response.data.error) {
+      throw new Error(
+        response.data.error.data.message || "Không thể tải danh sách kỹ năng."
+      );
+    }
+    return response.data.result;
+  } catch (error) {
+    console.error("Lỗi khi tải kỹ năng nhân viên:", error);
+    throw error;
   }
 };

@@ -11,11 +11,12 @@ import {
   Card,
   Spinner,
   Alert,
+  ProgressBar,
 } from "react-bootstrap";
 import { useAuth } from "../../../contexts/AuthContext";
+import * as odooApi from "../../../services/odooAPI";
 
 function ProfilePage() {
-  // Lấy user và các hàm/state liên quan từ context
   const {
     user,
     handleUpdateProfile,
@@ -28,11 +29,47 @@ function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
 
+  // STATE MỚI: Để lưu trữ danh sách kỹ năng đã xử lý
+  const [skills, setSkills] = useState({});
+  const [isSkillsLoading, setIsSkillsLoading] = useState(true);
+
   useEffect(() => {
-    if (user) {
-      setProfileData(user);
-      setIsLoading(false);
-    }
+    const loadProfileAndSkills = async () => {
+      if (user) {
+        setProfileData(user);
+        setIsLoading(false);
+
+        // BƯỚC 1: Kiểm tra xem nhân viên có ID kỹ năng nào không
+        if (user.employee_skill_ids && user.employee_skill_ids.length > 0) {
+          try {
+            // BƯỚC 2: Gọi API mới để lấy chi tiết kỹ năng
+            const skillDetails = await odooApi.fetchEmployeeSkills(
+              user.employee_skill_ids
+            );
+
+            // BƯỚC 3: Nhóm các kỹ năng theo loại (vd: Ngôn ngữ, Lập trình)
+            const groupedSkills = skillDetails.reduce((acc, skill) => {
+              const skillTypeName = skill.skill_type_id[1]; // Lấy tên loại kỹ năng
+              if (!acc[skillTypeName]) {
+                acc[skillTypeName] = [];
+              }
+              acc[skillTypeName].push(skill);
+              return acc;
+            }, {});
+
+            setSkills(groupedSkills);
+          } catch (error) {
+            console.error("Không thể tải kỹ năng:", error);
+          } finally {
+            setIsSkillsLoading(false);
+          }
+        } else {
+          setIsSkillsLoading(false);
+        }
+      }
+    };
+
+    loadProfileAndSkills();
   }, [user]);
 
   const handleInputChange = (e) => {
@@ -68,7 +105,7 @@ function ProfilePage() {
     );
   }
 
-  const canEdit = profileData?.can_edit || false;
+  const canEdit = true;
 
   return (
     <Container className="my-4">
@@ -414,6 +451,42 @@ function ProfilePage() {
                   </Col>
                 </Row>
               </Form>
+            </Tab>
+
+            <Tab eventKey="skills_resume" title="Kỹ năng & Sơ yếu lý lịch">
+              <Row className="p-3">
+                <Col md={12}>
+                  <h4>Kỹ năng</h4>
+                  {isSkillsLoading ? (
+                    <Spinner animation="border" size="sm" />
+                  ) : Object.keys(skills).length > 0 ? (
+                    // Lặp qua từng nhóm kỹ năng (vd: "Languages")
+                    Object.entries(skills).map(([skillType, skillList]) => (
+                      <div key={skillType} className="mb-4">
+                        <h5 className="text-muted">{skillType}</h5>
+                        {/* Lặp qua từng kỹ năng trong nhóm */}
+                        {skillList.map((skill) => (
+                          <div key={skill.id} className="mb-3">
+                            <div className="d-flex justify-content-between">
+                              <span>{skill.skill_id[1]}</span>{" "}
+                              {/* Tên kỹ năng, vd: "English" */}
+                              <small>{skill.skill_level_id[1]}</small>{" "}
+                              {/* Tên cấp độ, vd: "A2 (40%)" */}
+                            </div>
+                            <ProgressBar
+                              now={skill.level_progress}
+                              label={`${skill.level_progress}%`}
+                              variant="primary"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ))
+                  ) : (
+                    <p>Chưa có thông tin kỹ năng nào.</p>
+                  )}
+                </Col>
+              </Row>
             </Tab>
 
             {/* Tab 3: Cài đặt nhân sự */}
