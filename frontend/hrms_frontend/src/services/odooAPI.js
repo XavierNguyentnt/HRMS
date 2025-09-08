@@ -4,18 +4,58 @@ import URL from "../util/url";
 // Cấu hình tên database của bạn
 const ODOO_DB = process.env.REACT_APP_ODOO_DATABASE;
 
-// /**
-//  * Tiện ích chuyển đổi file sang chuỗi Base64 để gửi qua JSON-RPC.
-//  * @param {File} file - Đối tượng file từ input.
-//  * @returns {Promise<string>} - Một chuỗi Base64.
-//  */
-// const fileToBase64 = (file) =>
-//   new Promise((resolve, reject) => {
-//     const reader = new FileReader();
-//     reader.readAsDataURL(file);
-//     reader.onload = () => resolve(reader.result.split(",")[1]); // Chỉ lấy phần data base64
-//     reader.onerror = (error) => reject(error);
-//   });
+/**
+ * Danh sách các trường cần lấy từ model hr.employee để hiển thị đầy đủ trên trang Profile.
+ * Dựa trên XML view của Odoo.
+ */
+const PROFILE_FIELDS = [
+  "name",
+  "job_title",
+  "mobile_phone",
+  "work_phone",
+  "work_email",
+  "work_location_id",
+  "parent_id", // SỬA LỖI: Đổi 'employee_parent_id' thành 'parent_id'
+  "coach_id",
+  "department_id",
+  "address_id",
+  "private_street",
+  "private_street2",
+  "private_city",
+  "private_state_id",
+  "private_zip",
+  "private_country_id",
+  "private_email",
+  "private_phone",
+  // "private_lang",
+  // "employee_bank_account_id",
+  "distance_home_work",
+  "country_id",
+  "identification_id",
+  "ssnid",
+  "passport_id",
+  "gender",
+  "birthday",
+  "place_of_birth",
+  "country_of_birth",
+  "marital",
+  "spouse_complete_name",
+  "spouse_birthdate",
+  "certificate",
+  "study_field",
+  "study_school",
+  "children",
+  "emergency_contact",
+  "emergency_phone",
+  "visa_no",
+  "permit_no",
+  "visa_expire",
+  "employee_type",
+  "pin",
+  "barcode",
+  "image_1920",
+  // "can_edit", // Trường quan trọng để kiểm soát quyền sửa
+];
 
 /**
  * Hàm gọi API để đăng nhập vào Odoo.
@@ -49,6 +89,46 @@ export const login = async (login, password) => {
 };
 
 /**
+ * Lấy thông tin chi tiết của nhân viên (employee profile) từ user_id.
+ * @param {number} userId - ID của user (res.users)
+ * @returns {Promise<object>} - Dữ liệu chi tiết của nhân viên (hr.employee)
+ */
+export const fetchUserProfile = async (userId) => {
+  const params = {
+    model: "hr.employee",
+    method: "search_read",
+    args: [[["user_id", "=", userId]]], // Domain để tìm nhân viên liên kết với user
+    kwargs: {
+      fields: PROFILE_FIELDS,
+      limit: 1, // Chỉ cần 1 kết quả
+    },
+  };
+  try {
+    const response = await axiosInstance.post(URL.RPC_CALL, {
+      jsonrpc: "2.0",
+      params,
+    });
+    if (response.data.error) {
+      throw new Error(
+        response.data.error.data.message || "Không thể tải thông tin hồ sơ."
+      );
+    }
+    if (response.data.result && response.data.result.length > 0) {
+      return response.data.result[0]; // Trả về đối tượng nhân viên đầu tiên tìm thấy
+    }
+    console.warn(
+      "Không tìm thấy hồ sơ nhân viên (hr.employee) cho người dùng này."
+    );
+    return {}; // Trả về object rỗng nếu không có
+  } catch (error) {
+    if (error.response?.data?.error) {
+      throw new Error(error.response.data.error.data.message);
+    }
+    throw new Error(error.message || "Lỗi khi tải hồ sơ người dùng.");
+  }
+};
+
+/**
  * Gửi yêu cầu đăng ký người dùng mới (Signup).
  */
 export const register = async (userData) => {
@@ -63,28 +143,23 @@ export const register = async (userData) => {
       jsonrpc: "2.0",
       params,
     });
-
-    // Axios sẽ tự động ném lỗi cho các status code 4xx, 5xx,
-    // nên khối catch sẽ xử lý các lỗi đó.
-    // Nếu request thành công (200 OK), chúng ta trả về toàn bộ phần data.
-
-    // THAY ĐỔI DUY NHẤT Ở ĐÂY
-    // Trả về toàn bộ object { success, data } để AuthContext xử lý
     return response.data;
   } catch (error) {
-    // Ném lỗi ra để AuthContext có thể bắt và hiển thị thông báo chính xác
     throw error;
   }
 };
 
 /**
- * Gửi yêu cầu cập nhật thông tin người dùng.
+ * Gửi yêu cầu cập nhật thông tin nhân viên.
+ * @param {number} employeeId - ID của nhân viên (hr.employee)
+ * @param {object} updateData - Các trường dữ liệu cần cập nhật
  */
-export const updateProfile = async (userId, updateData) => {
+export const updateProfile = async (employeeId, updateData) => {
+  // Model phải là 'hr.employee' vì các trường thông tin cá nhân nằm ở đây
   const params = {
-    model: "res.users",
+    model: "hr.employee",
     method: "write",
-    args: [[userId], updateData],
+    args: [[employeeId], updateData],
     kwargs: {},
   };
   try {
@@ -97,43 +172,11 @@ export const updateProfile = async (userId, updateData) => {
         response.data.error.data.message || "Cập nhật thông tin thất bại."
       );
     }
-    return response.data.result;
+    return response.data.result; // Odoo 'write' trả về true
   } catch (error) {
     if (error.response && error.response.data && error.response.data.error) {
       throw new Error(error.response.data.error.data.message);
     }
     throw new Error(error.message || "Đã xảy ra lỗi khi cập nhật thông tin.");
-  }
-};
-
-/**
- * Hàm gọi API để lấy danh sách tasks
- */
-export const fetchTasks = async () => {
-  // Tương tự, việc lấy dữ liệu cũng dùng 'execute_kw' với method 'search_read'
-  const params = {
-    model: "project.task", // Tên model task của bạn
-    method: "search_read",
-    args: [[]], // Domain lọc, [] để lấy tất cả
-    kwargs: {
-      fields: ["id", "name", "stage_id", "user_id", "date_deadline"], // Các trường cần lấy
-    },
-  };
-  try {
-    const response = await axiosInstance.post(URL.RPC_CALL, {
-      jsonrpc: "2.0",
-      params,
-    });
-    if (response.data.error) {
-      throw new Error(
-        response.data.error.data.message || "Không thể tải danh sách công việc."
-      );
-    }
-    return response.data.result;
-  } catch (error) {
-    if (error.response && error.response.data && error.response.data.error) {
-      throw new Error(error.response.data.error.data.message);
-    }
-    throw new Error(error.message || "Đã xảy ra lỗi khi tải công việc.");
   }
 };

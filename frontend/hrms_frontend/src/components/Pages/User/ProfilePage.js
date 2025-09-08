@@ -6,36 +6,31 @@ import {
   Form,
   Button,
   Image,
-  Tabs, // Dùng để tạo notebook
-  Tab, // Dùng để tạo các page
+  Tabs,
+  Tab,
   Card,
   Spinner,
+  Alert,
 } from "react-bootstrap";
 import { useAuth } from "../../../contexts/AuthContext";
 
-/**
- * Tiện ích chuyển đổi file sang chuỗi Base64 để gửi qua JSON-RPC.
- * @param {File} file - Đối tượng file từ input.
- * @returns {Promise<string>} - Một chuỗi Base64 (chỉ phần data).
- */
-const fileToBase64 = (file) =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result.split(",")[1]);
-    reader.onerror = (error) => reject(error);
-  });
-
 function ProfilePage() {
-  const { user, updateUserProfile } = useAuth(); // Lấy user từ context
+  // Lấy user và các hàm/state liên quan từ context
+  const {
+    user,
+    handleUpdateProfile,
+    isUpdateLoading,
+    updateSuccess,
+    updateError,
+  } = useAuth();
+
   const [profileData, setProfileData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
-    // Khi component được tải, nếu có user, set data cho form
     if (user) {
-      setProfileData(user); // Dữ liệu từ context đã chứa đủ thông tin
+      setProfileData(user);
       setIsLoading(false);
     }
   }, [user]);
@@ -45,27 +40,46 @@ function ProfilePage() {
     setProfileData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = () => {
-    // Gọi API để lưu thay đổi
-    updateUserProfile(profileData);
+  const handleSave = async () => {
+    // Chỉ lấy những trường đã thay đổi để gửi đi, tối ưu request
+    const changedData = {};
+    Object.keys(profileData).forEach((key) => {
+      if (profileData[key] !== user[key]) {
+        changedData[key] = profileData[key];
+      }
+    });
+
+    if (Object.keys(changedData).length > 0) {
+      await handleUpdateProfile(changedData);
+    }
     setIsEditing(false);
   };
 
   const handleCancel = () => {
-    setProfileData(user); // Khôi phục lại dữ liệu gốc
+    setProfileData(user);
     setIsEditing(false);
   };
 
   if (isLoading) {
-    return <Spinner animation="border" />;
+    return (
+      <Container className="d-flex justify-content-center my-5">
+        <Spinner animation="border" />
+      </Container>
+    );
   }
 
-  // Lấy ra quyền sửa đổi từ API
   const canEdit = profileData?.can_edit || false;
+
   return (
     <Container className="my-4">
       <Card>
         <Card.Body>
+          {/* THÔNG BÁO CẬP NHẬT */}
+          {updateSuccess && (
+            <Alert variant="success">Cập nhật thông tin thành công!</Alert>
+          )}
+          {updateError && <Alert variant="danger">{updateError}</Alert>}
+
           {/* VÙNG THÔNG TIN CHÍNH */}
           <Row className="mb-4 align-items-center">
             <Col md={3} className="text-center">
@@ -77,7 +91,12 @@ function ProfilePage() {
                 }
                 roundedCircle
                 fluid
-                style={{ maxWidth: "150px", border: "3px solid #eee" }}
+                style={{
+                  width: "150px",
+                  height: "150px",
+                  objectFit: "cover",
+                  border: "3px solid #eee",
+                }}
               />
             </Col>
             <Col md={9}>
@@ -87,8 +106,9 @@ function ProfilePage() {
                   type="text"
                   name="name"
                   value={profileData?.name || ""}
+                  onChange={handleInputChange}
                   readOnly={!isEditing || !canEdit}
-                  className="h1 bg-transparent border-0 ps-0"
+                  className="h1 bg-transparent border-0 ps-0 fw-bold"
                 />
               </Form.Group>
               <Form.Group>
@@ -97,6 +117,7 @@ function ProfilePage() {
                   placeholder="Chức danh"
                   name="job_title"
                   value={profileData.job_title || ""}
+                  onChange={handleInputChange}
                   readOnly={!isEditing || !canEdit}
                   className="bg-transparent border-0 ps-0 text-muted fs-4"
                 />
@@ -104,9 +125,8 @@ function ProfilePage() {
             </Col>
           </Row>
 
-          {/* Dùng Tabs để thay thế <notebook> */}
           <Tabs defaultActiveKey="work_info" id="profile-tabs" className="mb-3">
-            {/* Tab 1: Thay thế <page name="public"> */}
+            {/* Tab 1: Thông tin công việc */}
             <Tab eventKey="work_info" title="Thông tin công việc">
               <Form>
                 <Row>
@@ -121,7 +141,6 @@ function ProfilePage() {
                     </Form.Group>
                     <Form.Group className="mb-3">
                       <Form.Label>Phòng ban</Form.Label>
-                      {/* Xử lý trường quan hệ: hiển thị tên */}
                       <Form.Control
                         type="text"
                         value={
@@ -144,6 +163,16 @@ function ProfilePage() {
                         readOnly
                       />
                     </Form.Group>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Người hướng dẫn (Coach)</Form.Label>
+                      <Form.Control
+                        type="text"
+                        value={
+                          profileData.coach_id ? profileData.coach_id[1] : ""
+                        }
+                        readOnly
+                      />
+                    </Form.Group>
                   </Col>
                   <Col md={6}>
                     <Form.Group className="mb-3">
@@ -152,6 +181,7 @@ function ProfilePage() {
                         type="text"
                         name="work_phone"
                         value={profileData.work_phone || ""}
+                        onChange={handleInputChange}
                         readOnly={!isEditing || !canEdit}
                       />
                     </Form.Group>
@@ -161,6 +191,7 @@ function ProfilePage() {
                         type="text"
                         name="mobile_phone"
                         value={profileData.mobile_phone || ""}
+                        onChange={handleInputChange}
                         readOnly={!isEditing || !canEdit}
                       />
                     </Form.Group>
@@ -168,13 +199,12 @@ function ProfilePage() {
                       <Form.Label>Địa chỉ nơi làm việc</Form.Label>
                       <Form.Control
                         type="text"
-                        name="work_location_id"
                         value={
                           profileData.work_location_id
                             ? profileData.work_location_id[1]
                             : ""
                         }
-                        readOnly // <-- Trường này thường không cho sửa trực tiếp, mà là chọn từ danh sách
+                        readOnly
                       />
                     </Form.Group>
                   </Col>
@@ -182,10 +212,10 @@ function ProfilePage() {
               </Form>
             </Tab>
 
+            {/* Tab 2: Thông tin cá nhân */}
             <Tab eventKey="private_info" title="Thông Tin Cá Nhân">
               <Form>
                 <Row>
-                  {/* CỘT BÊN TRÁI */}
                   <Col md={6}>
                     <h5 className="mt-3 mb-3">Địa chỉ & Liên lạc</h5>
                     <Form.Group className="mb-3">
@@ -261,13 +291,10 @@ function ProfilePage() {
                       />
                     </Form.Group>
                   </Col>
-
-                  {/* CỘT BÊN PHẢI */}
                   <Col md={6}>
-                    <h5 className="mt-3 mb-3">Thông Tin Thân Nhân & Học Vấn</h5>
+                    <h5 className="mt-3 mb-3">Thân nhân & Học vấn</h5>
                     <Form.Group className="mb-3">
                       <Form.Label>Quốc Tịch</Form.Label>
-                      {/* Trường quan hệ Many2one, tạm thời hiển thị tên và không cho sửa */}
                       <Form.Control
                         type="text"
                         value={
@@ -284,6 +311,16 @@ function ProfilePage() {
                         type="text"
                         name="identification_id"
                         value={profileData.identification_id || ""}
+                        onChange={handleInputChange}
+                        readOnly={!isEditing || !canEdit}
+                      />
+                    </Form.Group>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Số Hộ chiếu</Form.Label>
+                      <Form.Control
+                        type="text"
+                        name="passport_id"
+                        value={profileData.passport_id || ""}
                         onChange={handleInputChange}
                         readOnly={!isEditing || !canEdit}
                       />
@@ -326,8 +363,6 @@ function ProfilePage() {
                         <option value="divorced">Ly dị</option>
                       </Form.Select>
                     </Form.Group>
-
-                    {/* Logic ẩn/hiện dựa trên state */}
                     {(profileData.marital === "married" ||
                       profileData.marital === "cohabitant") && (
                       <Form.Group className="mb-3">
@@ -381,11 +416,10 @@ function ProfilePage() {
               </Form>
             </Tab>
 
-            {/* Tab 3: Thay thế <page name="hr_settings"> */}
+            {/* Tab 3: Cài đặt nhân sự */}
             <Tab eventKey="hr_settings" title="Cài Đặt Nhân Sự">
               <Form>
                 <Row>
-                  {/* CỘT BÊN TRÁI: STATUS */}
                   <Col md={6}>
                     <h5 className="mt-3 mb-3">Trạng Thái</h5>
                     <Form.Group className="mb-3">
@@ -407,8 +441,6 @@ function ProfilePage() {
                       </Form.Select>
                     </Form.Group>
                   </Col>
-
-                  {/* CỘT BÊN PHẢI: ATTENDANCE */}
                   <Col md={6}>
                     <h5 className="mt-3 mb-3">Chấm Công</h5>
                     <Form.Group className="mb-3">
@@ -454,8 +486,24 @@ function ProfilePage() {
                   onClick={handleCancel}>
                   Hủy
                 </Button>
-                <Button variant="success" onClick={handleSave}>
-                  Lưu Thay Đổi
+                <Button
+                  variant="success"
+                  onClick={handleSave}
+                  disabled={isUpdateLoading}>
+                  {isUpdateLoading ? (
+                    <>
+                      <Spinner
+                        as="span"
+                        animation="border"
+                        size="sm"
+                        role="status"
+                        aria-hidden="true"
+                      />{" "}
+                      Đang lưu...
+                    </>
+                  ) : (
+                    "Lưu Thay Đổi"
+                  )}
                 </Button>
               </>
             )}

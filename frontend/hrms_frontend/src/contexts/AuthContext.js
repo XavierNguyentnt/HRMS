@@ -34,10 +34,19 @@ export function AuthProvider({ children }) {
     setIsLoginLoading(true);
     setLoginError(null);
     try {
+      // Bước 1: Lấy session info cơ bản
       const sessionInfo = await odooApi.login(email, password);
-      setUser(sessionInfo);
-      localStorage.setItem("userSession", JSON.stringify(sessionInfo));
-      return sessionInfo;
+
+      // Bước 2: Lấy thông tin profile chi tiết từ hr.employee
+      const employeeProfile = await odooApi.fetchUserProfile(sessionInfo.uid);
+
+      // Bước 3: Gộp 2 object lại để có user state hoàn chỉnh
+      const fullUserSession = { ...sessionInfo, ...employeeProfile };
+
+      setUser(fullUserSession);
+      localStorage.setItem("userSession", JSON.stringify(fullUserSession));
+
+      return fullUserSession;
     } catch (err) {
       setLoginError(err.message || "Lỗi kết nối server. Vui lòng thử lại.");
       return null;
@@ -49,34 +58,18 @@ export function AuthProvider({ children }) {
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem("userSession");
-    // Có thể thêm lệnh gọi API logout ở đây nếu backend yêu cầu
   };
 
-  /**
-   * Xử lý đăng ký người dùng mới.
-   * @param {object} userData - Dữ liệu người dùng { name, email, password }
-   * @returns {boolean} - Trả về true nếu thành công, false nếu thất bại.
-   */
   const handleRegister = async (userData) => {
     setIsRegisterLoading(true);
     setRegisterError(null);
     try {
-      // odooApi.register trả về { success: true, data: { ... } }
       const response = await odooApi.register(userData);
-
-      // ==========================================================
-      // ĐIỂM THAY ĐỔI QUAN TRỌNG NHẤT
-      // Chúng ta chỉ lấy phần 'data' từ response để cập nhật user state
       const newSession = response.data;
-
       setUser(newSession);
       localStorage.setItem("userSession", JSON.stringify(newSession));
-      // ==========================================================
-
-      return true; // Báo hiệu đăng ký thành công để trang Register có thể điều hướng
+      return true;
     } catch (err) {
-      // Axios sẽ tự động ném lỗi cho các status 4xx, 5xx
-      // Lấy message lỗi từ response của Odoo
       const errorMessage =
         err.response?.data?.data?.message ||
         err.message ||
@@ -88,28 +81,32 @@ export function AuthProvider({ children }) {
     }
   };
 
-  /**
-   * Cập nhật thông tin người dùng.
-   * @param {FormData} updateData - Dữ liệu form chứa thông tin cần cập nhật.
-   * @returns {boolean} - Trả về true nếu thành công, false nếu thất bại.
-   */
   const handleUpdateProfile = async (updateData) => {
     setIsUpdateLoading(true);
     setUpdateError(null);
     setUpdateSuccess(false);
-    try {
-      // API cập nhật nên trả về thông tin user đã được làm mới
-      const updatedUserFields = await odooApi.updateProfile(
-        user.uid,
-        updateData
-      );
 
-      // Cập nhật state toàn cục với thông tin mới
-      const updatedSession = { ...user, ...updatedUserFields };
+    // ID của nhân viên (hr.employee) được lưu trong user.id
+    if (!user || !user.id) {
+      setUpdateError("Không tìm thấy ID nhân viên để cập nhật.");
+      setIsUpdateLoading(false);
+      return false;
+    }
+
+    try {
+      // Bước 1: Gửi yêu cầu cập nhật lên server
+      await odooApi.updateProfile(user.id, updateData);
+
+      // Bước 2: Lấy lại toàn bộ thông tin mới nhất từ server để đảm bảo đồng bộ
+      const freshProfile = await odooApi.fetchUserProfile(user.uid);
+
+      // Bước 3: Cập nhật state toàn cục với thông tin mới
+      const updatedSession = { ...user, ...freshProfile };
       setUser(updatedSession);
       localStorage.setItem("userSession", JSON.stringify(updatedSession));
 
-      setUpdateSuccess(true); // Set trạng thái thành công để hiển thị thông báo
+      setUpdateSuccess(true);
+      setTimeout(() => setUpdateSuccess(false), 3000); // Tự động ẩn thông báo thành công sau 3s
       return true;
     } catch (err) {
       setUpdateError(err.message || "Cập nhật thông tin thất bại.");
@@ -123,22 +120,18 @@ export function AuthProvider({ children }) {
   const value = {
     user,
     handleLogout,
-
-    // Props cho Login
-    isLoading: isLoginLoading, // Giữ lại `isLoading` để tương thích với LoginPage cũ
-    error: loginError, // Giữ lại `error`
     handleLogin,
+    isLoginLoading, // Đổi tên cho rõ ràng
+    loginError,
 
-    // Props cho Register
+    handleRegister,
     isRegisterLoading,
     registerError,
-    handleRegister,
 
-    // Props cho Profile Update
+    handleUpdateProfile,
     isUpdateLoading,
     updateError,
     updateSuccess,
-    handleUpdateProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

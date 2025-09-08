@@ -16,7 +16,9 @@ import "./AuthPages.css"; // File CSS tùy chỉnh để giao diện đẹp hơn
 function LoginPage() {
   const [identifier, setIdentifier] = useState("admin");
   const [password, setPassword] = useState("admin");
-  const { handleLogin, isLoading, error } = useAuth();
+
+  // SỬA LỖI: Đổi tên biến để khớp với AuthContext
+  const { handleLogin, isLoginLoading, loginError } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (event) => {
@@ -61,15 +63,16 @@ function LoginPage() {
                     />
                   </Form.Group>
 
-                  {error && <Alert variant="danger">{error}</Alert>}
+                  {/* SỬA LỖI: Dùng đúng biến loginError */}
+                  {loginError && <Alert variant="danger">{loginError}</Alert>}
 
                   <div className="d-grid mt-4">
                     <Button
                       variant="primary"
                       type="submit"
-                      disabled={isLoading}
+                      disabled={isLoginLoading} // SỬA LỖI: Dùng đúng biến isLoginLoading
                       size="lg">
-                      {isLoading ? (
+                      {isLoginLoading ? ( // SỬA LỖI: Dùng đúng biến isLoginLoading
                         <>
                           <Spinner
                             as="span"
