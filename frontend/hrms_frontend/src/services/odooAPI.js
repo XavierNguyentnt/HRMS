@@ -301,7 +301,7 @@ export const addEmployeeSkill = async (skillData) => {
     method: "create",
     args: [skillData],
     kwargs: {},
-  }; // THÊM DÒNG NÀY
+  };
   const response = await axiosInstance.post(URL.RPC_CALL, {
     jsonrpc: "2.0",
     params,
@@ -316,7 +316,7 @@ export const deleteEmployeeSkill = async (skillLineId) => {
     method: "unlink",
     args: [[skillLineId]],
     kwargs: {},
-  }; // THÊM DÒNG NÀY (sửa args thành [[id]])
+  };
   const response = await axiosInstance.post(URL.RPC_CALL, {
     jsonrpc: "2.0",
     params,
@@ -344,7 +344,7 @@ export const updateEmployeeSkill = async (skillLineId, data) => {
   return response.data.result;
 };
 
-// === CÁC HÀM API MỚI CHO VIỆC THÊM/XÓA KINH NGHIỆM LÀM VIỆC ===
+// === CÁC HÀM API CHO VIỆC THÊM/XÓA KINH NGHIỆM LÀM VIỆC ===
 
 /**
  * Lấy chi tiết các dòng kinh nghiệm làm việc (resume).

@@ -128,7 +128,6 @@ function ProfilePage() {
       skill_id: skillId,
       skill_level_id: "",
     }));
-    setLevelsForSkill([]);
     setSkillToUpdateId(null); // Reset ID cần update
 
     if (skillId) {
@@ -143,21 +142,47 @@ function ProfilePage() {
       if (existingSkill) {
         // Nếu đã tồn tại, lưu lại ID của dòng hr.employee.skill để CẬP NHẬT
         setSkillToUpdateId(existingSkill.id);
+        // Đồng thời gán sẵn skill_level_id hiện tại để hiển thị
+        setNewSkillData((prev) => ({
+          ...prev,
+          skill_level_id: existingSkill.skill_level_id[0],
+        }));
       }
-
-      // Tải danh sách cấp độ hợp lệ
-      const typeId = parseInt(newSkillData.skill_type_id);
-      const levels = await odooApi.fetchSkillLevelsByType(
-        typeId,
-        parsedSkillId
-      );
-      setLevelsForSkill(levels);
     }
   };
 
+  const handleEditSkill = async (skill) => {
+    // Tải toàn bộ skill type (để populate dropdown)
+    const types = await odooApi.fetchSkillTypes();
+    setSkillTypes(types);
+
+    // Tải skills và levels theo type hiện tại
+    const [skills, levels] = await Promise.all([
+      odooApi.fetchSkillsByType(skill.skill_type_id[0]),
+      odooApi.fetchSkillLevelsByType(skill.skill_type_id[0]),
+    ]);
+    setSkillsForType(skills);
+    setLevelsForSkill(levels);
+
+    // Gán dữ liệu skill đang edit
+    setNewSkillData({
+      skill_type_id: skill.skill_type_id[0],
+      skill_id: skill.skill_id[0],
+      skill_level_id: skill.skill_level_id[0],
+    });
+    setSkillToUpdateId(skill.id);
+
+    // Mở modal
+    setShowSkillModal(true);
+  };
+
   const handleSaveNewSkill = async () => {
-    if (!newSkillData.skill_id || !newSkillData.skill_level_id) {
-      alert("Vui lòng chọn đầy đủ thông tin.");
+    if (
+      !newSkillData.skill_type_id ||
+      !newSkillData.skill_id ||
+      !newSkillData.skill_level_id
+    ) {
+      alert("Vui lòng chọn đầy đủ loại, kỹ năng và cấp độ.");
       return;
     }
 
@@ -175,6 +200,7 @@ function ProfilePage() {
           employee_id: user.id,
           skill_id: parseInt(newSkillData.skill_id),
           skill_level_id: newLevelId,
+          skill_type_id: parseInt(newSkillData.skill_type_id), // BẮT BUỘC
         });
       }
       setShowSkillModal(false);
@@ -603,7 +629,11 @@ function ProfilePage() {
                           {list.map((skill) => (
                             <div key={skill.id} className="mb-3">
                               <div className="d-flex justify-content-between">
-                                <span>{skill.skill_id[1]}</span>
+                                <span
+                                  className="cursor-pointer text-primary"
+                                  onClick={() => handleEditSkill(skill)}>
+                                  {skill.skill_id[1]}
+                                </span>
                                 <small className="d-flex align-items-center">
                                   {skill.skill_level_id[1]}
                                   <FaTrash
@@ -760,12 +790,15 @@ function ProfilePage() {
         onHide={() => setShowSkillModal(false)}
         centered>
         <Modal.Header closeButton>
-          <Modal.Title>Thêm Kỹ năng mới</Modal.Title>
+          <Modal.Title>
+            {skillToUpdateId ? "Chỉnh sửa kỹ năng" : "Thêm kỹ năng mới"}
+          </Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form.Group className="mb-3">
             <Form.Label>Loại kỹ năng</Form.Label>
             <Form.Select
+              value={newSkillData.skill_type_id}
               onChange={(e) => handleSkillTypeChange(e.target.value)}>
               <option value="">-- Chọn loại --</option>
               {skillTypes.map((type) => (
@@ -778,6 +811,7 @@ function ProfilePage() {
           <Form.Group className="mb-3">
             <Form.Label>Tên kỹ năng</Form.Label>
             <Form.Select
+              value={newSkillData.skill_id}
               disabled={skillsForType.length === 0}
               onChange={(e) => handleSkillChange(e.target.value)}>
               <option value="">-- Chọn kỹ năng --</option>
@@ -791,6 +825,7 @@ function ProfilePage() {
           <Form.Group className="mb-3">
             <Form.Label>Cấp độ</Form.Label>
             <Form.Select
+              value={newSkillData.skill_level_id}
               disabled={levelsForSkill.length === 0}
               onChange={(e) =>
                 setNewSkillData((prev) => ({
@@ -812,7 +847,7 @@ function ProfilePage() {
             Hủy
           </Button>
           <Button variant="primary" onClick={handleSaveNewSkill}>
-            Lưu
+            {skillToUpdateId ? "Cập nhật" : "Lưu"}
           </Button>
         </Modal.Footer>
       </Modal>
