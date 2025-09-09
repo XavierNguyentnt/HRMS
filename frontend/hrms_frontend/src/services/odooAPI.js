@@ -443,3 +443,35 @@ export const updateResumeLine = async (resumeLineId, data) => {
     throw new Error(error.message || "Đã xảy ra lỗi khi cập nhật resume.");
   }
 };
+
+// Lấy danh sách quốc gia
+export const fetchCountries = async () => {
+  const params = {
+    model: "res.country",
+    method: "search_read",
+    args: [[], ["id", "name"]],
+    kwargs: { order: "name asc" },
+  };
+  const response = await axiosInstance.post(URL.RPC_CALL, {
+    jsonrpc: "2.0",
+    params,
+  });
+  if (response.data.error) throw new Error(response.data.error.data.message);
+  return response.data.result;
+};
+
+// Lấy danh sách tỉnh/thành theo country
+export const fetchStatesByCountry = async (countryId) => {
+  const params = {
+    model: "res.country.state",
+    method: "search_read",
+    args: [[["country_id", "=", countryId]], ["id", "name"]],
+    kwargs: { order: "name asc" },
+  };
+  const response = await axiosInstance.post(URL.RPC_CALL, {
+    jsonrpc: "2.0",
+    params,
+  });
+  if (response.data.error) throw new Error(response.data.error.data.message);
+  return response.data.result;
+};

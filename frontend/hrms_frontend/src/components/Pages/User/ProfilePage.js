@@ -27,6 +27,7 @@ function ProfilePage() {
     updateError,
   } = useAuth();
 
+  //---State chỉnh sửa kỹ năng ---
   const [profileData, setProfileData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -60,6 +61,44 @@ function ProfilePage() {
     date_end: "",
     description: "",
   });
+
+  // --- State sửa quốc gia/ tỉnh ---
+  const [countries, setCountries] = useState([]);
+  const [states, setStates] = useState([]);
+
+  useEffect(() => {
+    const loadDropdowns = async () => {
+      const countryList = await odooApi.fetchCountries();
+      setCountries(countryList);
+
+      if (user?.country_id?.[0]) {
+        const stateList = await odooApi.fetchStatesByCountry(
+          user.country_id[0]
+        );
+        setStates(stateList);
+      }
+    };
+    loadDropdowns();
+  }, [user]);
+
+  const handleCountryChange = async (e) => {
+    const countryId = parseInt(e.target.value) || null;
+    setProfileData((prev) => ({ ...prev, country_id: countryId }));
+
+    if (countryId) {
+      const stateList = await odooApi.fetchStatesByCountry(countryId);
+      setStates(stateList);
+      // reset state khi đổi country
+      setProfileData((prev) => ({ ...prev, private_state_id: "" }));
+    } else {
+      setStates([]);
+    }
+  };
+
+  const handleStateChange = (e) => {
+    const stateId = parseInt(e.target.value) || null;
+    setProfileData((prev) => ({ ...prev, private_state_id: stateId }));
+  };
 
   //Mở Modal khi click vào kỹ năng
   const handleEditResume = (resume) => {
@@ -113,7 +152,13 @@ function ProfilePage() {
   useEffect(() => {
     const loadData = async () => {
       if (user) {
-        setProfileData(user);
+        setProfileData({
+          ...user,
+          country_id: user.country_id ? user.country_id[0] : "",
+          private_state_id: user.private_state_id
+            ? user.private_state_id[0]
+            : "",
+        });
         setIsLoading(false);
 
         // Tải Kỹ năng
@@ -283,13 +328,20 @@ function ProfilePage() {
   };
 
   const handleSave = async () => {
-    // Chỉ lấy những trường đã thay đổi để gửi đi, tối ưu request
     const changedData = {};
     Object.keys(profileData).forEach((key) => {
       if (profileData[key] !== user[key]) {
         changedData[key] = profileData[key];
       }
     });
+
+    // giữ nguyên tên field đúng với Odoo
+    if (changedData.country_id) {
+      changedData.country_id = parseInt(changedData.country_id);
+    }
+    if (changedData.private_state_id) {
+      changedData.private_state_id = parseInt(changedData.private_state_id);
+    }
 
     if (Object.keys(changedData).length > 0) {
       await handleUpdateProfile(changedData);
@@ -485,14 +537,21 @@ function ProfilePage() {
                         />
                       </Form.Group>
                       <Form.Group className="mb-3">
-                        <Form.Label>Thành phố</Form.Label>
-                        <Form.Control
-                          type="text"
-                          name="private_state"
+                        <Form.Label>Tỉnh / Thành phố</Form.Label>
+                        <Form.Select
+                          name="private_state_id"
                           value={profileData.private_state_id || ""}
-                          onChange={handleInputChange}
-                          readOnly={!isEditing || !canEdit}
-                        />
+                          onChange={handleStateChange}
+                          disabled={
+                            !isEditing || !canEdit || states.length === 0
+                          }>
+                          <option value="">-- Chọn Tỉnh/Thành --</option>
+                          {states.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.name}
+                            </option>
+                          ))}
+                        </Form.Select>
                       </Form.Group>
                       <Form.Group className="mb-3">
                         <Form.Label>Email Cá Nhân</Form.Label>
@@ -541,15 +600,18 @@ function ProfilePage() {
                       <h5 className="mt-3 mb-3">Thân nhân & Học vấn</h5>
                       <Form.Group className="mb-3">
                         <Form.Label>Quốc Tịch</Form.Label>
-                        <Form.Control
-                          type="text"
-                          value={
-                            profileData.country_id
-                              ? profileData.country_id[1]
-                              : ""
-                          }
-                          readOnly
-                        />
+                        <Form.Select
+                          name="country_id"
+                          value={profileData.country_id || ""}
+                          onChange={handleCountryChange}
+                          disabled={!isEditing || !canEdit}>
+                          <option value="">-- Chọn Quốc gia --</option>
+                          {countries.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </Form.Select>
                       </Form.Group>
                       <Form.Group className="mb-3">
                         <Form.Label>Số CMND/CCCD</Form.Label>
