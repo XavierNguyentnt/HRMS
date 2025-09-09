@@ -55,6 +55,7 @@ const PROFILE_FIELDS = [
   "barcode",
   "image_1920",
   "employee_skill_ids",
+  "resume_line_ids",
   // "can_edit", // Trường quan trọng để kiểm soát quyền sửa
 ];
 
@@ -216,4 +217,150 @@ export const fetchEmployeeSkills = async (skill_ids) => {
     console.error("Lỗi khi tải kỹ năng nhân viên:", error);
     throw error;
   }
+};
+
+// === CÁC HÀM API MỚI CHO VIỆC THÊM/XÓA KỸ NĂNG ===
+
+/**
+ * Lấy tất cả các loại kỹ năng (vd: Language, Programming).
+ */
+export const fetchSkillTypes = async () => {
+  const params = {
+    model: "hr.skill.type",
+    method: "search_read",
+    args: [[]],
+    kwargs: { fields: ["id", "name"] },
+  };
+  const response = await axiosInstance.post(URL.RPC_CALL, {
+    jsonrpc: "2.0",
+    params,
+  });
+  return response.data.result || []; // SỬA LỖI: Đảm bảo luôn trả về một mảng
+};
+
+/**
+ * HÀM API MỚI VÀ DUY NHẤT ĐỂ LẤY CẤP ĐỘ
+ * Lấy danh sách các cấp độ hợp lệ, bao gồm cả cấp độ chung (theo loại) và cấp độ riêng (theo kỹ năng).
+ * @param {number} typeId - ID của Loại kỹ năng đang được chọn.
+ * @param {number} skillId - ID của Tên kỹ năng đang được chọn.
+ */
+
+export const fetchSkillsByType = async (typeId) => {
+  const params = {
+    model: "hr.skill",
+    method: "search_read",
+    args: [[["skill_type_id", "=", typeId]]],
+    kwargs: { fields: ["id", "name"] },
+  };
+  const response = await axiosInstance.post(URL.RPC_CALL, {
+    jsonrpc: "2.0",
+    params,
+  });
+  return response.data.result || []; // SỬA LỖI: Đảm bảo luôn trả về một mảng
+};
+
+/**
+ * Lấy tất cả các cấp độ thuộc một LOẠI kỹ năng.
+ * Đây là logic đúng dựa trên dữ liệu và view của Odoo.
+ */
+export const fetchSkillLevelsByType = async (typeId) => {
+  const params = {
+    model: "hr.skill.level",
+    method: "search_read",
+    args: [[["skill_type_id", "=", typeId]]], // Lọc theo skill_type_id
+    kwargs: { fields: ["id", "name"] },
+  };
+  const response = await axiosInstance.post(URL.RPC_CALL, {
+    jsonrpc: "2.0",
+    params,
+  });
+  return response.data.result || [];
+};
+
+export const addEmployeeSkill = async (skillData) => {
+  const params = {
+    model: "hr.employee.skill",
+    method: "create",
+    args: [skillData],
+    kwargs: {},
+  }; // THÊM DÒNG NÀY
+  const response = await axiosInstance.post(URL.RPC_CALL, {
+    jsonrpc: "2.0",
+    params,
+  });
+  if (response.data.error) throw new Error(response.data.error.data.message);
+  return response.data.result;
+};
+
+export const deleteEmployeeSkill = async (skillLineId) => {
+  const params = {
+    model: "hr.employee.skill",
+    method: "unlink",
+    args: [[skillLineId]],
+    kwargs: {},
+  }; // THÊM DÒNG NÀY (sửa args thành [[id]])
+  const response = await axiosInstance.post(URL.RPC_CALL, {
+    jsonrpc: "2.0",
+    params,
+  });
+  if (response.data.error) throw new Error(response.data.error.data.message);
+  return response.data.result;
+};
+
+/**
+ * THÊM HÀM MỚI
+ * Cập nhật một dòng kỹ năng đã có của nhân viên (chủ yếu là cập nhật skill_level_id).
+ */
+export const updateEmployeeSkill = async (skillLineId, data) => {
+  const params = {
+    model: "hr.employee.skill",
+    method: "write",
+    args: [[skillLineId], data], // data sẽ là { skill_level_id: newLevelId }
+    kwargs: {},
+  };
+  const response = await axiosInstance.post(URL.RPC_CALL, {
+    jsonrpc: "2.0",
+    params,
+  });
+  if (response.data.error) throw new Error(response.data.error.data.message);
+  return response.data.result;
+};
+
+// === CÁC HÀM API MỚI CHO VIỆC THÊM/XÓA KINH NGHIỆM LÀM VIỆC ===
+
+/**
+ * Lấy chi tiết các dòng kinh nghiệm làm việc (resume).
+ */
+export const fetchEmployeeResumeLines = async (resume_line_ids) => {
+  if (!resume_line_ids || resume_line_ids.length === 0) return [];
+  const params = {
+    model: "hr.resume.line",
+    method: "read",
+    args: [
+      resume_line_ids,
+      ["id", "name", "date_start", "date_end", "description", "line_type_id"],
+    ],
+    kwargs: {},
+  };
+  const response = await axiosInstance.post(URL.RPC_CALL, {
+    jsonrpc: "2.0",
+    params,
+  });
+  if (response.data.error) throw new Error(response.data.error.data.message);
+  return response.data.result;
+};
+
+export const deleteResumeLine = async (resumeLineId) => {
+  const params = {
+    model: "hr.resume.line",
+    method: "unlink",
+    args: [[resumeLineId]],
+    kwargs: {},
+  };
+  const response = await axiosInstance.post(URL.RPC_CALL, {
+    jsonrpc: "2.0",
+    params,
+  });
+  if (response.data.error) throw new Error(response.data.error.data.message);
+  return response.data.result;
 };

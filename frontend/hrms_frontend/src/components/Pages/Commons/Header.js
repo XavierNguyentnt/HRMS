@@ -2,6 +2,7 @@ import React from "react";
 import { Navbar, Nav, Container, NavDropdown, Image } from "react-bootstrap";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
+import "./Header.css";
 
 // Component Header chung cho toàn bộ ứng dụng
 function Header() {
@@ -14,14 +15,14 @@ function Header() {
   };
 
   return (
-    <Navbar
-      bg="dark"
-      variant="dark"
-      expand="lg"
-      sticky="top"
-      className="shadow-sm">
+    <Navbar variant="light  " expand="lg" sticky="top" className="header-bg">
       <Container>
         {/* Logo hoặc tên ứng dụng */}
+        <Image
+          src="../../../../../../logo/logo-duan.png"
+          as={Link}
+          to="/"
+          style={{ height: "9vh", marginRight: "30px" }}></Image>
         <Navbar.Brand as={Link} to="/" className="fw-bold">
           Quản lý Dự án
         </Navbar.Brand>

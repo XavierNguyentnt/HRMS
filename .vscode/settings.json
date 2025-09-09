@@ -1,4 +1,12 @@
 {
-  "cSpell.words": ["jsonrequest", "keepalive", "Odoo", "sendfile"],
+  "cSpell.words": [
+    "duan",
+    "jsonrequest",
+    "keepalive",
+    "kwargs",
+    "Odoo",
+    "sendfile",
+    "ssnid"
+  ],
   "CodeGPT.apiKey": "Anthropic"
 }
