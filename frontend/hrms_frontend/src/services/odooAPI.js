@@ -382,3 +382,64 @@ export const deleteResumeLine = async (resumeLineId) => {
   if (response.data.error) throw new Error(response.data.error.data.message);
   return response.data.result;
 };
+
+/**
+ * Thêm 1 dòng kinh nghiệm (hr.resume.line)
+ * @param {Object} resumeData - { employee_id, name, date_start, date_end, description, line_type_id, ... }
+ * @returns {number} id của record mới tạo (theo response Odoo)
+ */
+export const addResumeLine = async (resumeData) => {
+  const params = {
+    model: "hr.resume.line",
+    method: "create",
+    args: [resumeData],
+    kwargs: {},
+  };
+  try {
+    const response = await axiosInstance.post(URL.RPC_CALL, {
+      jsonrpc: "2.0",
+      params,
+    });
+    if (response.data.error) {
+      throw new Error(response.data.error.data.message);
+    }
+    return response.data.result;
+  } catch (error) {
+    console.error("Lỗi khi thêm resume line:", error);
+    if (error.response?.data?.error) {
+      throw new Error(error.response.data.error.data.message);
+    }
+    throw new Error(error.message || "Đã xảy ra lỗi khi thêm resume.");
+  }
+};
+
+/**
+ * Cập nhật 1 dòng kinh nghiệm theo id
+ * @param {number} resumeLineId
+ * @param {Object} data - các trường cần cập nhật, ví dụ { name, date_start, date_end, description }
+ * @returns {boolean} true nếu cập nhật thành công
+ */
+export const updateResumeLine = async (resumeLineId, data) => {
+  const params = {
+    model: "hr.resume.line",
+    method: "write",
+    args: [[resumeLineId], data],
+    kwargs: {},
+  };
+  try {
+    const response = await axiosInstance.post(URL.RPC_CALL, {
+      jsonrpc: "2.0",
+      params,
+    });
+    if (response.data.error) {
+      throw new Error(response.data.error.data.message);
+    }
+    return response.data.result;
+  } catch (error) {
+    console.error("Lỗi khi cập nhật resume line:", error);
+    if (error.response?.data?.error) {
+      throw new Error(error.response.data.error.data.message);
+    }
+    throw new Error(error.message || "Đã xảy ra lỗi khi cập nhật resume.");
+  }
+};

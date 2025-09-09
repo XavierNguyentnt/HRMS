@@ -51,6 +51,58 @@ function ProfilePage() {
   });
   const [skillToUpdateId, setSkillToUpdateId] = useState(null);
 
+  //State cho Modal chỉnh sửa "Kinh nghiệm làm việc"
+  const [showResumeModal, setShowResumeModal] = useState(false);
+  const [resumeToEdit, setResumeToEdit] = useState(null);
+  const [resumeFormData, setResumeFormData] = useState({
+    name: "",
+    date_start: "",
+    date_end: "",
+    description: "",
+  });
+
+  //Mở Modal khi click vào kỹ năng
+  const handleEditResume = (resume) => {
+    setResumeToEdit(resume.id);
+    setResumeFormData({
+      name: resume.name || "",
+      date_start: resume.date_start || "",
+      date_end: resume.date_end || "",
+      description: resume.description || "",
+    });
+    setShowResumeModal(true);
+  };
+  //Hàm xử lý lưu chỉnh sửa kỹ năng
+  const handleSaveResume = async () => {
+    try {
+      if (resumeToEdit) {
+        const safeDescription = resumeFormData.description
+          .trim()
+          .startsWith("<p>")
+          ? resumeFormData.description
+          : `<p>${resumeFormData.description}</p>`;
+
+        // cập nhật
+        await odooApi.updateResumeLine(resumeToEdit, {
+          ...resumeFormData,
+          description: safeDescription,
+        });
+      } else {
+        // thêm mới (bắt buộc gắn employee_id)
+        await odooApi.addResumeLine({
+          employee_id: user.id,
+          ...resumeFormData,
+        });
+      }
+      setShowResumeModal(false);
+      setResumeToEdit(null);
+      forceUpdateData();
+    } catch (error) {
+      console.error("Lỗi khi lưu resume:", error);
+      alert(`Lỗi: ${error.message}`);
+    }
+  };
+
   // === Dữ liệu và logic ===
   const forceUpdateData = useCallback(async () => {
     // Hàm này sẽ được gọi sau khi thêm/xóa để làm mới toàn bộ dữ liệu
@@ -665,20 +717,28 @@ function ProfilePage() {
                       <Spinner size="sm" />
                     ) : resumeLines.length > 0 ? (
                       resumeLines.map((line) => (
-                        <div key={line.id} className="mb-3 border-bottom pb-2">
+                        <div
+                          key={line.id}
+                          className="mb-3 border-bottom pb-2 cursor-pointer"
+                          onClick={() => handleEditResume(line)}>
                           <div className="d-flex justify-content-between">
                             <h6 className="fw-bold">{line.name}</h6>
                             <FaTrash
                               className="text-danger cursor-pointer"
-                              onClick={() => handleDeleteResume(line.id)}
+                              onClick={(e) => {
+                                e.stopPropagation(); // tránh mở modal khi bấm xoá
+                                handleDeleteResume(line.id);
+                              }}
                             />
                           </div>
                           <p className="text-muted small">
                             {line.date_start} - {line.date_end || "Hiện tại"}
                           </p>
-                          <p style={{ whiteSpace: "pre-wrap" }}>
-                            {line.description}
-                          </p>
+                          <p
+                            className="resume-description"
+                            dangerouslySetInnerHTML={{
+                              __html: line.description || "",
+                            }}></p>
                         </div>
                       ))
                     ) : (
@@ -848,6 +908,76 @@ function ProfilePage() {
           </Button>
           <Button variant="primary" onClick={handleSaveNewSkill}>
             {skillToUpdateId ? "Cập nhật" : "Lưu"}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+      <Modal
+        show={showResumeModal}
+        onHide={() => setShowResumeModal(false)}
+        centered>
+        <Modal.Header closeButton>
+          <Modal.Title>
+            {resumeToEdit ? "Chỉnh sửa Kinh nghiệm" : "Thêm Kinh nghiệm"}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form.Group className="mb-3">
+            <Form.Label>Chức danh / Công việc</Form.Label>
+            <Form.Control
+              type="text"
+              value={resumeFormData.name}
+              onChange={(e) =>
+                setResumeFormData((prev) => ({ ...prev, name: e.target.value }))
+              }
+            />
+          </Form.Group>
+          <Form.Group className="mb-3">
+            <Form.Label>Ngày bắt đầu</Form.Label>
+            <Form.Control
+              type="date"
+              value={resumeFormData.date_start}
+              onChange={(e) =>
+                setResumeFormData((prev) => ({
+                  ...prev,
+                  date_start: e.target.value,
+                }))
+              }
+            />
+          </Form.Group>
+          <Form.Group className="mb-3">
+            <Form.Label>Ngày kết thúc</Form.Label>
+            <Form.Control
+              type="date"
+              value={resumeFormData.date_end}
+              onChange={(e) =>
+                setResumeFormData((prev) => ({
+                  ...prev,
+                  date_end: e.target.value,
+                }))
+              }
+            />
+          </Form.Group>
+          <Form.Group className="mb-3">
+            <Form.Label>Mô tả</Form.Label>
+            <Form.Control
+              as="textarea"
+              rows={4}
+              value={resumeFormData.description}
+              onChange={(e) =>
+                setResumeFormData((prev) => ({
+                  ...prev,
+                  description: e.target.value,
+                }))
+              }
+            />
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowResumeModal(false)}>
+            Hủy
+          </Button>
+          <Button variant="primary" onClick={handleSaveResume}>
+            {resumeToEdit ? "Cập nhật" : "Lưu"}
           </Button>
         </Modal.Footer>
       </Modal>
