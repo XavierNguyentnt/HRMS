@@ -724,7 +724,7 @@ function ProfilePage() {
                 </Form>
               </Tab>
 
-              <Tab eventKey="skills_resume" title="Kỹ năng & Sơ yếu lý lịch">
+              <Tab eventKey="skills_resume" title="Kỹ năng & Kinh nghiệm">
                 <Row className="p-3">
                   {/* === PHẦN KỸ NĂNG === */}
                   <Col md={6}>

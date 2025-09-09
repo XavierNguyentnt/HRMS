@@ -2,13 +2,16 @@ import React from "react";
 // Thêm 'Outlet' từ react-router-dom
 import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
+import PrivateRoute from "./components/Routes/PrivateRoute";
 
 // Import các component
 import Header from "./components/Pages/Commons/Header";
 import LoginPage from "./components/Pages/Auth/LoginPage";
-import RegisterPage from "./components/Pages/Auth/RegisterPage";
+// import RegisterPage from "./components/Pages/Auth/RegisterPage";
 import ProfilePage from "./components/Pages/User/ProfilePage";
 import DashboardPage from "./components/Pages/Dashboards/DashboardPage";
+import DepartmentsPage from "./components/Pages/Department/DepartmentsPage";
+import EmployeesPage from "./components/Pages/Employee/EmployeesPage";
 
 // =================================================================
 // Component Layout chính: Render Header và nội dung các trang con
@@ -38,10 +41,10 @@ function App() {
           path="/login"
           element={user ? <Navigate to="/dashboard" /> : <LoginPage />}
         />
-        <Route
+        {/* <Route
           path="/register"
           element={user ? <Navigate to="/dashboard" /> : <RegisterPage />}
-        />
+        /> */}
 
         {/* ================================================================= */}
         {/* CÁC ROUTE ĐƯỢC BẢO VỆ (SỬ DỤNG MAINLAYOUT VÀ CÓ HEADER) */}
@@ -51,6 +54,22 @@ function App() {
           element={user ? <MainLayout /> : <Navigate to="/login" />}>
           {/* Các route con này sẽ được render bên trong <Outlet /> của MainLayout */}
           <Route path="dashboard" element={<DashboardPage />} />
+          <Route
+            path="/departments"
+            element={
+              <PrivateRoute>
+                <DepartmentsPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/employees"
+            element={
+              <PrivateRoute>
+                <EmployeesPage />
+              </PrivateRoute>
+            }
+          />
           <Route path="profile" element={<ProfilePage />} />
 
           {/* Khi cần thêm trang mới có Header, chỉ cần thêm vào đây:

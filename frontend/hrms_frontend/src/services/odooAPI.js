@@ -102,7 +102,7 @@ export const fetchUserProfile = async (userId) => {
     args: [[["user_id", "=", userId]]], // Domain để tìm nhân viên liên kết với user
     kwargs: {
       fields: PROFILE_FIELDS,
-      limit: 1, // Chỉ cần 1 kết quả
+      limit: 1,
     },
   };
   try {
@@ -162,7 +162,7 @@ export const updateProfile = async (employeeId, updateData) => {
     model: "hr.employee",
     method: "write",
     args: [[employeeId], updateData],
-    kwargs: {},
+    kwargs: { context: { lang: "vi_VN" } },
   };
   try {
     const response = await axiosInstance.post(URL.RPC_CALL, {
@@ -474,4 +474,77 @@ export const fetchStatesByCountry = async (countryId) => {
   });
   if (response.data.error) throw new Error(response.data.error.data.message);
   return response.data.result;
+};
+
+// === CÁC HÀM API MỚI CHO TRANG PHÒNG BAN & NHÂN VIÊN ===
+
+/**
+ * Lấy danh sách tất cả các phòng ban.
+ */
+export const fetchDepartments = async () => {
+  const params = {
+    model: "hr.department",
+    method: "search_read",
+    args: [[]],
+    kwargs: {
+      // Lấy thêm các trường từ XML bạn cung cấp
+      fields: [
+        "id",
+        "name",
+        "manager_id",
+        "total_employee",
+        "color",
+        "company_id",
+      ],
+      context: { lang: "vi_VN" },
+    },
+  };
+  const response = await axiosInstance.post(URL.RPC_CALL, {
+    jsonrpc: "2.0",
+    params,
+  });
+  if (response.data.error) throw new Error(response.data.error.data.message);
+  return response.data.result || [];
+};
+
+/**
+ * Lấy danh sách nhân viên với các tùy chọn linh hoạt.
+ * @param {Array} domain - Mảng điều kiện lọc của Odoo, vd: [['department_id', '=', 1]]
+ * @param {Array} fields - Mảng các trường cần lấy, vd: ['name', 'job_title']
+ * @param {number} limit - Số lượng bản ghi tối đa
+ * @param {number} offset - Vị trí bắt đầu lấy
+ */
+export const fetchEmployees = async ({
+  domain = [],
+  fields = [],
+  limit = 80,
+  offset = 0,
+}) => {
+  const params = {
+    model: "hr.employee",
+    method: "search_read",
+    args: [domain],
+    kwargs: {
+      fields:
+        fields.length > 0
+          ? fields
+          : [
+              "id",
+              "name",
+              "job_title",
+              "work_email",
+              "work_phone",
+              "image_128",
+            ],
+      limit,
+      offset,
+      context: { lang: "vi_VN" },
+    },
+  };
+  const response = await axiosInstance.post(URL.RPC_CALL, {
+    jsonrpc: "2.0",
+    params,
+  });
+  if (response.data.error) throw new Error(response.data.error.data.message);
+  return response.data.result || [];
 };

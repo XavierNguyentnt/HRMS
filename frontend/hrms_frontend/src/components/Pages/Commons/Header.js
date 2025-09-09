@@ -35,6 +35,12 @@ function Header() {
                 <Nav.Link as={Link} to="/dashboard">
                   Bảng điều khiển
                 </Nav.Link>
+                <Nav.Link as={Link} to="/departments">
+                  Phòng Ban
+                </Nav.Link>
+                <Nav.Link as={Link} to="/employees">
+                  Nhân Viên
+                </Nav.Link>
                 <Nav.Link as={Link} to="/projects">
                   Các dự án
                 </Nav.Link>
