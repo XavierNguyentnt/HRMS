@@ -147,7 +147,10 @@ function ProfilePage() {
 
       // Tải danh sách cấp độ hợp lệ
       const typeId = parseInt(newSkillData.skill_type_id);
-      const levels = await odooApi.fetchSkillLevelsByType(typeId, parsedSkillId);
+      const levels = await odooApi.fetchSkillLevelsByType(
+        typeId,
+        parsedSkillId
+      );
       setLevelsForSkill(levels);
     }
   };

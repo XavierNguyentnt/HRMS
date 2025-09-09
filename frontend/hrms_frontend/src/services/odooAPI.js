@@ -277,6 +277,24 @@ export const fetchSkillLevelsByType = async (typeId) => {
   return response.data.result || [];
 };
 
+/**
+ * Lấy các cấp độ được phép DỰA TRÊN TÊN KỸ NĂNG cụ thể.
+ * Đây là logic bắt buộc phải tuân theo constraint của server Odoo.
+ */
+export const fetchSkillLevelsBySkill = async (skillId) => {
+  const params = {
+    model: "hr.skill.level",
+    method: "search_read",
+    args: [[["skill_id", "=", skillId]]], // Lọc theo skill_id
+    kwargs: { fields: ["id", "name"] },
+  };
+  const response = await axiosInstance.post(URL.RPC_CALL, {
+    jsonrpc: "2.0",
+    params,
+  });
+  return response.data.result || [];
+};
+
 export const addEmployeeSkill = async (skillData) => {
   const params = {
     model: "hr.employee.skill",
