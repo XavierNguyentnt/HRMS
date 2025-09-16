@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="view_employee_form_js_fix" model="ir.ui.view">
+            <field name="name">hr.employee.form.js.fix</field>
+            <field name="model">hr.employee</field>
+            <field name="inherit_id" ref="hr.view_employee_form"/>
+            <field name="priority">99</field> <field name="arch" type="xml">
+                <xpath expr="//form" position="attributes">
+                    <attribute name="js_class"/>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>

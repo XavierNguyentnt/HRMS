@@ -587,3 +587,41 @@ export const fetchEmployees = async ({
   if (response.data.error) throw new Error(response.data.error.data.message);
   return response.data.result || [];
 };
+
+/**
+ * [ADMIN] Tạo một bản ghi nhân viên mới.
+ * @param {object} employeeData - Dữ liệu của nhân viên mới (vd: { name, work_email, ... })
+ */
+export const createEmployee = async (employeeData) => {
+  const params = {
+    model: "hr.employee",
+    method: "create",
+    args: [employeeData],
+    kwargs: {},
+  };
+  const response = await axiosInstance.post(URL.RPC_CALL, {
+    jsonrpc: "2.0",
+    params,
+  });
+  if (response.data.error) throw new Error(response.data.error.data.message);
+  return response.data.result; // Trả về ID của nhân viên mới
+};
+
+/**
+ * [ADMIN] Vô hiệu hóa một nhân viên (an toàn hơn xóa).
+ * @param {number} employeeId - ID của nhân viên cần vô hiệu hóa.
+ */
+export const archiveEmployee = async (employeeId) => {
+  const params = {
+    model: "hr.employee",
+    method: "write",
+    args: [[employeeId], { active: false }], // Đặt trường active thành false
+    kwargs: {},
+  };
+  const response = await axiosInstance.post(URL.RPC_CALL, {
+    jsonrpc: "2.0",
+    params,
+  });
+  if (response.data.error) throw new Error(response.data.error.data.message);
+  return response.data.result; // Trả về true
+};
