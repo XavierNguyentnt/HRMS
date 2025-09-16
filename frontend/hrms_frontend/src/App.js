@@ -71,7 +71,6 @@ function App() {
             }
           />
           <Route path="profile" element={<ProfilePage />} />
-          <Route path="profile/:employeeId" element={<ProfilePage />} />
 
           {/* Khi cần thêm trang mới có Header, chỉ cần thêm vào đây:
             <Route path="projects" element={<ProjectsPage />} /> 
