@@ -70,7 +70,6 @@ function App() {
               </PrivateRoute>
             }
           />
-          <Route path="/profile/:employeeId" element={<ProfilePage />} />
           <Route path="profile" element={<ProfilePage />} />
 
           {/* Khi cần thêm trang mới có Header, chỉ cần thêm vào đây:

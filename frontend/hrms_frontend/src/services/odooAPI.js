@@ -60,63 +60,6 @@ const PROFILE_FIELDS = [
 ];
 
 /**
- * Hàm gọi API chung, đã được xác thực.
- * @param {string} endpoint - Đường dẫn API, ví dụ: '/v1/employees/123'.
- * @param {object} [options={}] - Các tùy chọn cho hàm fetch (method, body, headers...).
- * @returns {Promise<any>} - Dữ liệu JSON trả về từ API.
- */
-const apiCall = async (endpoint, options = {}) => {
-  // 1. Lấy token xác thực từ localStorage (hoặc nơi bạn lưu trữ)
-  const session = JSON.parse(localStorage.getItem("session"));
-  const token = session?.session_token;
-
-  if (!token) {
-    // Nếu không có token, chuyển hướng về trang đăng nhập hoặc báo lỗi
-    console.error("No authentication token found. Redirecting to login.");
-    // window.location.href = '/login'; // Tùy chọn: tự động logout
-    throw new Error("User is not authenticated.");
-  }
-
-  // 2. Chuẩn bị headers
-  const defaultHeaders = {
-    "Content-Type": "application/json",
-    // Gửi token qua header Authorization theo chuẩn Bearer Token
-    Authorization: `Bearer ${token}`,
-  };
-
-  // 3. Cấu hình cho yêu cầu fetch
-  const config = {
-    // Gộp các headers mặc định và headers tùy chọn (nếu có)
-    headers: {
-      ...defaultHeaders,
-      ...options.headers,
-    },
-    // Giữ lại các tùy chọn khác như method, body
-    ...options,
-  };
-
-  // 4. Gọi API bằng fetch
-  const odoo_url = process.env.REACT_APP_ODOO_URL || ""; // Lấy URL gốc của Odoo từ biến môi trường
-  const response = await fetch(`${odoo_url}${endpoint}`, config);
-
-  // 5. Xử lý phản hồi
-  if (!response.ok) {
-    // Nếu API trả về lỗi (status code không phải 2xx)
-    if (response.status === 401) {
-      // Lỗi xác thực -> token hết hạn hoặc không hợp lệ
-      localStorage.removeItem("session"); // Xóa session hỏng
-      window.location.href = "/login"; // Đưa người dùng về trang đăng nhập
-    }
-    // Ném lỗi để các hàm .catch() bên ngoài có thể bắt được
-    const errorData = await response.json();
-    throw new Error(errorData.message || `API Error: ${response.status}`);
-  }
-
-  // Nếu thành công, trả về dữ liệu JSON
-  return response.json();
-};
-
-/**
  * Hàm gọi API để đăng nhập vào Odoo.
  */
 export const login = async (login, password) => {
@@ -604,14 +547,4 @@ export const fetchEmployees = async ({
   });
   if (response.data.error) throw new Error(response.data.error.data.message);
   return response.data.result || [];
-};
-
-/**
- * Lấy thông tin chi tiết của một nhân viên theo ID.
- * @param {number} employeeId ID của nhân viên cần lấy thông tin
- * @returns {Promise<Object>} Object chứa profile và permissions
- */
-export const fetchEmployeeById = async (employeeId) => {
-  // Chỉ cần gọi hàm apiCall với endpoint và phương thức GET
-  return await apiCall(`/v1/employees/${employeeId}`, { method: "GET" });
 };
