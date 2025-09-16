@@ -131,6 +131,45 @@ export const fetchUserProfile = async (userId) => {
 };
 
 /**
+ * HÀM MỚI: Lấy thông tin chi tiết của một nhân viên bằng ID của chính nhân viên đó (hr.employee).
+ * Hiệu quả hơn search_read khi đã biết ID.
+ * @param {number} employeeId - ID của nhân viên (hr.employee)
+ * @returns {Promise<object>} - Dữ liệu chi tiết của nhân viên.
+ */
+export const fetchEmployeeById = async (employeeId) => {
+  const params = {
+    model: "hr.employee",
+    method: "read", // Sử dụng 'read' để lấy trực tiếp từ ID
+    args: [
+      [employeeId], // Odoo 'read' cần một mảng chứa các ID
+      PROFILE_FIELDS, // Tái sử dụng danh sách các trường đã định nghĩa
+    ],
+    kwargs: { context: { lang: "vi_VN" } },
+  };
+  try {
+    const response = await axiosInstance.post(URL.RPC_CALL, {
+      jsonrpc: "2.0",
+      params,
+    });
+    if (response.data.error) {
+      throw new Error(
+        response.data.error.data.message || "Không thể tải thông tin nhân viên."
+      );
+    }
+    // 'read' trả về một mảng các record, ta chỉ cần record đầu tiên
+    if (response.data.result && response.data.result.length > 0) {
+      return response.data.result[0];
+    }
+    throw new Error("Không tìm thấy nhân viên với ID đã cho.");
+  } catch (error) {
+    if (error.response?.data?.error) {
+      throw new Error(error.response.data.error.data.message);
+    }
+    throw new Error(error.message || "Lỗi khi tải hồ sơ nhân viên.");
+  }
+};
+
+/**
  * Gửi yêu cầu đăng ký người dùng mới (Signup).
  */
 export const register = async (userData) => {

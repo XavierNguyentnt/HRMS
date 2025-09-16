@@ -34,9 +34,7 @@ function App() {
   return (
     <div className="App">
       <Routes>
-        {/* ================================================================= */}
         {/* CÁC ROUTE CÔNG KHAI (KHÔNG CÓ HEADER) */}
-        {/* ================================================================= */}
         <Route
           path="/login"
           element={user ? <Navigate to="/dashboard" /> : <LoginPage />}
@@ -46,9 +44,7 @@ function App() {
           element={user ? <Navigate to="/dashboard" /> : <RegisterPage />}
         /> */}
 
-        {/* ================================================================= */}
         {/* CÁC ROUTE ĐƯỢC BẢO VỆ (SỬ DỤNG MAINLAYOUT VÀ CÓ HEADER) */}
-        {/* ================================================================= */}
         <Route
           path="/"
           element={user ? <MainLayout /> : <Navigate to="/login" />}>
@@ -71,6 +67,7 @@ function App() {
             }
           />
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="profile/:employeeId" element={<ProfilePage />} />
 
           {/* Khi cần thêm trang mới có Header, chỉ cần thêm vào đây:
             <Route path="projects" element={<ProjectsPage />} /> 

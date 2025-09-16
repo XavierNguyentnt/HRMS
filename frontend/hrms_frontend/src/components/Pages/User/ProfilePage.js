@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useParams } from "react-router-dom";
 import {
   Container,
   Row,
@@ -19,6 +20,9 @@ import * as odooApi from "../../../services/odooAPI";
 import { FaTrash, FaPlusCircle } from "react-icons/fa";
 
 function ProfilePage() {
+  // Lấy employeeId từ URL. Nó sẽ là `undefined` nếu URL là '/profile'
+  const { employeeId } = useParams();
+
   const {
     user,
     handleUpdateProfile,
@@ -30,7 +34,12 @@ function ProfilePage() {
   //---State chỉnh sửa kỹ năng ---
   const [profileData, setProfileData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+
+  // State để xác định đây là trang của người khác (chỉ xem)
+  // Mặc định là không, tức là trang của chính mình.
+  const [isViewOnly, setIsViewOnly] = useState(false);
 
   // --- State cho Kỹ năng ---
   const [skills, setSkills] = useState({});
@@ -65,21 +74,6 @@ function ProfilePage() {
   // --- State sửa quốc gia/ tỉnh ---
   const [countries, setCountries] = useState([]);
   const [states, setStates] = useState([]);
-
-  useEffect(() => {
-    const loadDropdowns = async () => {
-      const countryList = await odooApi.fetchCountries();
-      setCountries(countryList);
-
-      if (user?.country_id?.[0]) {
-        const stateList = await odooApi.fetchStatesByCountry(
-          user.country_id[0]
-        );
-        setStates(stateList);
-      }
-    };
-    loadDropdowns();
-  }, [user]);
 
   const handleCountryChange = async (e) => {
     const countryId = parseInt(e.target.value) || null;
@@ -150,44 +144,88 @@ function ProfilePage() {
   }, [handleUpdateProfile]);
 
   useEffect(() => {
-    const loadData = async () => {
-      if (user) {
-        setProfileData({
-          ...user,
-          country_id: user.country_id ? user.country_id[0] : "",
-          private_state_id: user.private_state_id
-            ? user.private_state_id[0]
-            : "",
-        });
-        setIsLoading(false);
+    const loadDropdowns = async () => {
+      const countryList = await odooApi.fetchCountries();
+      setCountries(countryList);
+      // Logic tải state sẽ dựa vào profileData thay vì user
+      if (profileData?.country_id) {
+        const stateList = await odooApi.fetchStatesByCountry(
+          profileData.country_id
+        );
+        setStates(stateList);
+      }
+    };
+    loadDropdowns();
+  }, [profileData]); // Phụ thuộc vào profileData
 
-        // Tải Kỹ năng
-        if (user.employee_skill_ids?.length > 0) {
-          const details = await odooApi.fetchEmployeeSkills(
-            user.employee_skill_ids
-          );
-          const grouped = details.reduce((acc, s) => {
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        let data;
+        // KIỂM TRA: Có employeeId trên URL không?
+        if (employeeId) {
+          // CÓ -> Đây là trang xem thông tin người khác
+          setIsViewOnly(true); // Bật chế độ chỉ xem
+          data = await odooApi.fetchEmployeeById(parseInt(employeeId, 10));
+        } else if (user) {
+          // KHÔNG -> Đây là trang của người dùng đang đăng nhập
+          setIsViewOnly(false); // Tắt chế độ chỉ xem
+          data = user; // Dùng trực tiếp dữ liệu từ context
+        } else {
+          // Trường hợp không có ID và cũng không có user (chưa đăng nhập)
+          throw new Error("Không thể xác định hồ sơ để hiển thị.");
+        }
+
+        if (data) {
+          // Chuẩn hóa dữ liệu để hiển thị
+          setProfileData({
+            ...data,
+            country_id: data.country_id ? data.country_id[0] : "",
+            private_state_id: data.private_state_id
+              ? data.private_state_id[0]
+              : "",
+          });
+
+          // Tải đồng thời Kỹ năng và Kinh nghiệm
+          setIsSkillsLoading(true);
+          setIsResumeLoading(true);
+
+          const [skillDetails, resumeDetails] = await Promise.all([
+            data.employee_skill_ids?.length > 0
+              ? odooApi.fetchEmployeeSkills(data.employee_skill_ids)
+              : Promise.resolve([]),
+            data.resume_line_ids?.length > 0
+              ? odooApi.fetchEmployeeResumeLines(data.resume_line_ids)
+              : Promise.resolve([]),
+          ]);
+
+          // Xử lý Kỹ năng
+          const groupedSkills = skillDetails.reduce((acc, s) => {
             const typeName = s.skill_type_id[1];
             if (!acc[typeName]) acc[typeName] = [];
             acc[typeName].push(s);
             return acc;
           }, {});
-          setSkills(grouped);
-        }
-        setIsSkillsLoading(false);
+          setSkills(groupedSkills);
+          setIsSkillsLoading(false);
 
-        // Tải Kinh nghiệm
-        if (user.resume_line_ids?.length > 0) {
-          const lines = await odooApi.fetchEmployeeResumeLines(
-            user.resume_line_ids
-          );
-          setResumeLines(lines);
+          // Xử lý Kinh nghiệm
+          setResumeLines(resumeDetails);
+          setIsResumeLoading(false);
         }
-        setIsResumeLoading(false);
+      } catch (err) {
+        console.error("Failed to load profile data:", err);
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
       }
     };
+
     loadData();
-  }, [user]);
+    // Phụ thuộc vào employeeId (từ URL) và user (từ context)
+  }, [employeeId, user]);
 
   // === Xử lý cho Modal Thêm Kỹ năng ===
   const handleShowSkillModal = async () => {
@@ -354,6 +392,7 @@ function ProfilePage() {
     setIsEditing(false);
   };
 
+  // === PHẦN RENDER ===
   if (isLoading) {
     return (
       <Container className="d-flex justify-content-center my-5">
@@ -362,7 +401,25 @@ function ProfilePage() {
     );
   }
 
-  const canEdit = true;
+  if (error) {
+    return (
+      <Container className="my-4">
+        <Alert variant="danger">{error}</Alert>
+      </Container>
+    );
+  }
+
+  // Nếu không loading, không lỗi nhưng không có dữ liệu -> báo không tìm thấy
+  if (!profileData) {
+    return (
+      <Container className="my-4">
+        <Alert variant="warning">Không tìm thấy thông tin nhân viên.</Alert>
+      </Container>
+    );
+  }
+
+  // const canEdit = true;
+  const canEdit = !isViewOnly;
 
   return (
     <>
@@ -402,7 +459,7 @@ function ProfilePage() {
                     name="name"
                     value={profileData?.name || ""}
                     onChange={handleInputChange}
-                    readOnly={!isEditing || !canEdit}
+                    readOnly={isViewOnly || !isEditing || !canEdit}
                     className="h1 bg-transparent border-0 ps-0 fw-bold"
                   />
                 </Form.Group>
@@ -413,7 +470,7 @@ function ProfilePage() {
                     name="job_title"
                     value={profileData.job_title || ""}
                     onChange={handleInputChange}
-                    readOnly={!isEditing || !canEdit}
+                    readOnly={isViewOnly || !isEditing || !canEdit}
                     className="bg-transparent border-0 ps-0 text-muted fs-4"
                   />
                 </Form.Group>
@@ -480,7 +537,7 @@ function ProfilePage() {
                           name="work_phone"
                           value={profileData.work_phone || ""}
                           onChange={handleInputChange}
-                          readOnly={!isEditing || !canEdit}
+                          readOnly={isViewOnly || !isEditing || !canEdit}
                         />
                       </Form.Group>
                       <Form.Group className="mb-3">
@@ -490,7 +547,7 @@ function ProfilePage() {
                           name="mobile_phone"
                           value={profileData.mobile_phone || ""}
                           onChange={handleInputChange}
-                          readOnly={!isEditing || !canEdit}
+                          readOnly={isViewOnly || !isEditing || !canEdit}
                         />
                       </Form.Group>
                       <Form.Group className="mb-3">
@@ -523,7 +580,7 @@ function ProfilePage() {
                           name="private_street"
                           value={profileData.private_street || ""}
                           onChange={handleInputChange}
-                          readOnly={!isEditing || !canEdit}
+                          readOnly={isViewOnly || !isEditing || !canEdit}
                         />
                       </Form.Group>
                       <Form.Group className="mb-3">
@@ -533,7 +590,7 @@ function ProfilePage() {
                           name="private_street2"
                           value={profileData.private_street2 || ""}
                           onChange={handleInputChange}
-                          readOnly={!isEditing || !canEdit}
+                          readOnly={isViewOnly || !isEditing || !canEdit}
                         />
                       </Form.Group>
                       <Form.Group className="mb-3">
@@ -543,7 +600,10 @@ function ProfilePage() {
                           value={profileData.private_state_id || ""}
                           onChange={handleStateChange}
                           disabled={
-                            !isEditing || !canEdit || states.length === 0
+                            isViewOnly ||
+                            !isEditing ||
+                            !canEdit ||
+                            states.length === 0
                           }>
                           <option value="">-- Chọn Tỉnh/Thành --</option>
                           {states.map((s) => (
@@ -560,7 +620,7 @@ function ProfilePage() {
                           name="private_email"
                           value={profileData.private_email || ""}
                           onChange={handleInputChange}
-                          readOnly={!isEditing || !canEdit}
+                          readOnly={isViewOnly || !isEditing || !canEdit}
                         />
                       </Form.Group>
                       <Form.Group className="mb-3">
@@ -570,7 +630,7 @@ function ProfilePage() {
                           name="private_phone"
                           value={profileData.private_phone || ""}
                           onChange={handleInputChange}
-                          readOnly={!isEditing || !canEdit}
+                          readOnly={isViewOnly || !isEditing || !canEdit}
                         />
                       </Form.Group>
 
@@ -582,7 +642,7 @@ function ProfilePage() {
                           name="emergency_contact"
                           value={profileData.emergency_contact || ""}
                           onChange={handleInputChange}
-                          readOnly={!isEditing || !canEdit}
+                          readOnly={isViewOnly || !isEditing || !canEdit}
                         />
                       </Form.Group>
                       <Form.Group className="mb-3">
@@ -592,7 +652,7 @@ function ProfilePage() {
                           name="emergency_phone"
                           value={profileData.emergency_phone || ""}
                           onChange={handleInputChange}
-                          readOnly={!isEditing || !canEdit}
+                          readOnly={isViewOnly || !isEditing || !canEdit}
                         />
                       </Form.Group>
                     </Col>
@@ -604,7 +664,7 @@ function ProfilePage() {
                           name="country_id"
                           value={profileData.country_id || ""}
                           onChange={handleCountryChange}
-                          disabled={!isEditing || !canEdit}>
+                          disabled={isViewOnly || !isEditing || !canEdit}>
                           <option value="">-- Chọn Quốc gia --</option>
                           {countries.map((c) => (
                             <option key={c.id} value={c.id}>
@@ -620,7 +680,7 @@ function ProfilePage() {
                           name="identification_id"
                           value={profileData.identification_id || ""}
                           onChange={handleInputChange}
-                          readOnly={!isEditing || !canEdit}
+                          readOnly={isViewOnly || !isEditing || !canEdit}
                         />
                       </Form.Group>
                       <Form.Group className="mb-3">
@@ -630,7 +690,7 @@ function ProfilePage() {
                           name="passport_id"
                           value={profileData.passport_id || ""}
                           onChange={handleInputChange}
-                          readOnly={!isEditing || !canEdit}
+                          readOnly={isViewOnly || !isEditing || !canEdit}
                         />
                       </Form.Group>
                       <Form.Group className="mb-3">
@@ -639,7 +699,7 @@ function ProfilePage() {
                           name="gender"
                           value={profileData.gender || ""}
                           onChange={handleInputChange}
-                          disabled={!isEditing || !canEdit}>
+                          disabled={isViewOnly || !isEditing || !canEdit}>
                           <option value="">-- Chọn --</option>
                           <option value="male">Nam</option>
                           <option value="female">Nữ</option>
@@ -653,7 +713,7 @@ function ProfilePage() {
                           name="birthday"
                           value={profileData.birthday || ""}
                           onChange={handleInputChange}
-                          readOnly={!isEditing || !canEdit}
+                          readOnly={isViewOnly || !isEditing || !canEdit}
                         />
                       </Form.Group>
                       <Form.Group className="mb-3">
@@ -662,7 +722,7 @@ function ProfilePage() {
                           name="marital"
                           value={profileData.marital || ""}
                           onChange={handleInputChange}
-                          disabled={!isEditing || !canEdit}>
+                          disabled={isViewOnly || !isEditing || !canEdit}>
                           <option value="">-- Chọn --</option>
                           <option value="single">Độc thân</option>
                           <option value="married">Đã kết hôn</option>
@@ -680,7 +740,7 @@ function ProfilePage() {
                             name="spouse_complete_name"
                             value={profileData.spouse_complete_name || ""}
                             onChange={handleInputChange}
-                            readOnly={!isEditing || !canEdit}
+                            readOnly={isViewOnly || !isEditing || !canEdit}
                           />
                         </Form.Group>
                       )}
@@ -690,7 +750,7 @@ function ProfilePage() {
                           name="certificate"
                           value={profileData.certificate || ""}
                           onChange={handleInputChange}
-                          disabled={!isEditing || !canEdit}>
+                          disabled={isViewOnly || !isEditing || !canEdit}>
                           <option value="">-- Chọn --</option>
                           <option value="graduate">Tốt nghiệp Phổ thông</option>
                           <option value="bachelor">Cử nhân</option>
@@ -706,7 +766,7 @@ function ProfilePage() {
                           name="study_field"
                           value={profileData.study_field || ""}
                           onChange={handleInputChange}
-                          readOnly={!isEditing || !canEdit}
+                          readOnly={isViewOnly || !isEditing || !canEdit}
                         />
                       </Form.Group>
                       <Form.Group className="mb-3">
@@ -716,7 +776,7 @@ function ProfilePage() {
                           name="study_school"
                           value={profileData.study_school || ""}
                           onChange={handleInputChange}
-                          readOnly={!isEditing || !canEdit}
+                          readOnly={isViewOnly || !isEditing || !canEdit}
                         />
                       </Form.Group>
                     </Col>
@@ -730,9 +790,11 @@ function ProfilePage() {
                   <Col md={6}>
                     <div className="d-flex justify-content-between align-items-center mb-3">
                       <h4>Kỹ năng</h4>
-                      <Button variant="link" onClick={handleShowSkillModal}>
-                        <FaPlusCircle /> Thêm
-                      </Button>
+                      {!isViewOnly && (
+                        <Button variant="link" onClick={handleShowSkillModal}>
+                          <FaPlusCircle /> Thêm
+                        </Button>
+                      )}
                     </div>
                     {isSkillsLoading ? (
                       <Spinner size="sm" />
@@ -773,7 +835,6 @@ function ProfilePage() {
                   <Col md={6}>
                     <div className="d-flex justify-content-between align-items-center mb-3">
                       <h4>Kinh nghiệm</h4>
-                      {/* Nút thêm kinh nghiệm có thể được thêm ở đây */}
                     </div>
                     {isResumeLoading ? (
                       <Spinner size="sm" />
@@ -785,13 +846,15 @@ function ProfilePage() {
                           onClick={() => handleEditResume(line)}>
                           <div className="d-flex justify-content-between">
                             <h6 className="fw-bold">{line.name}</h6>
-                            <FaTrash
-                              className="text-danger cursor-pointer"
-                              onClick={(e) => {
-                                e.stopPropagation(); // tránh mở modal khi bấm xoá
-                                handleDeleteResume(line.id);
-                              }}
-                            />
+                            {!isViewOnly && (
+                              <FaTrash
+                                className="text-danger cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation(); // tránh mở modal khi bấm xoá
+                                  handleDeleteResume(line.id);
+                                }}
+                              />
+                            )}
                           </div>
                           <p className="text-muted small">
                             {line.date_start} - {line.date_end || "Hiện tại"}
@@ -822,7 +885,7 @@ function ProfilePage() {
                           name="employee_type"
                           value={profileData.employee_type || ""}
                           onChange={handleInputChange}
-                          disabled={!isEditing || !canEdit}>
+                          disabled={isViewOnly || !isEditing || !canEdit}>
                           <option value="">-- Chọn --</option>
                           <option value="employee">Nhân viên</option>
                           <option value="contractor">
@@ -845,7 +908,7 @@ function ProfilePage() {
                           placeholder="Mã PIN để chấm công"
                           value={profileData.pin || ""}
                           onChange={handleInputChange}
-                          readOnly={!isEditing || !canEdit}
+                          readOnly={isViewOnly || !isEditing || !canEdit}
                         />
                       </Form.Group>
                       <Form.Group className="mb-3">
@@ -856,7 +919,7 @@ function ProfilePage() {
                           placeholder="Mã vạch định danh nhân viên"
                           value={profileData.barcode || ""}
                           onChange={handleInputChange}
-                          readOnly={!isEditing || !canEdit}
+                          readOnly={isViewOnly || !isEditing || !canEdit}
                         />
                       </Form.Group>
                     </Col>
@@ -884,20 +947,7 @@ function ProfilePage() {
                     variant="success"
                     onClick={handleSave}
                     disabled={isUpdateLoading}>
-                    {isUpdateLoading ? (
-                      <>
-                        <Spinner
-                          as="span"
-                          animation="border"
-                          size="sm"
-                          role="status"
-                          aria-hidden="true"
-                        />{" "}
-                        Đang lưu...
-                      </>
-                    ) : (
-                      "Lưu Thay Đổi"
-                    )}
+                    {isUpdateLoading ? "Đang lưu..." : "Lưu Thay Đổi"}
                   </Button>
                 </>
               )}
