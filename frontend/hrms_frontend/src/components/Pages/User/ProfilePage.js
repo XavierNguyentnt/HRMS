@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Container,
   Row,
@@ -14,11 +14,13 @@ import {
   ProgressBar,
   Modal,
 } from "react-bootstrap";
+import { useParams } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
 import * as odooApi from "../../../services/odooAPI";
 import { FaTrash, FaPlusCircle } from "react-icons/fa";
 
 function ProfilePage() {
+  const { employeeId } = useParams();
   const {
     user,
     handleUpdateProfile,
@@ -27,20 +29,25 @@ function ProfilePage() {
     updateError,
   } = useAuth();
 
-  //---State chỉnh sửa kỹ năng ---
+  //--- State chính ---
   const [profileData, setProfileData] = useState(null);
+  // NEW: State để lưu trạng thái gốc khi bấm "Chỉnh sửa", giải quyết lỗi nút "Hủy"
+  const [initialProfileData, setInitialProfileData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [permissions, setPermissions] = useState({ can_edit: false });
+  // NEW: State trigger để làm mới dữ liệu một cách chủ động và ổn định
+  const [refetchTrigger, setRefetchTrigger] = useState(0);
 
-  // --- State cho Kỹ năng ---
+  // --- State cho các thành phần con ---
   const [skills, setSkills] = useState({});
   const [isSkillsLoading, setIsSkillsLoading] = useState(true);
-
-  // --- State cho Kinh nghiệm làm việc ---
   const [resumeLines, setResumeLines] = useState([]);
   const [isResumeLoading, setIsResumeLoading] = useState(true);
+  const [countries, setCountries] = useState([]);
+  const [states, setStates] = useState([]);
 
-  // --- State cho Modal "Thêm Kỹ năng" ---
+  // --- State cho Modals ---
   const [showSkillModal, setShowSkillModal] = useState(false);
   const [skillTypes, setSkillTypes] = useState([]);
   const [skillsForType, setSkillsForType] = useState([]);
@@ -51,8 +58,6 @@ function ProfilePage() {
     skill_level_id: "",
   });
   const [skillToUpdateId, setSkillToUpdateId] = useState(null);
-
-  //State cho Modal chỉnh sửa "Kinh nghiệm làm việc"
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [resumeToEdit, setResumeToEdit] = useState(null);
   const [resumeFormData, setResumeFormData] = useState({
@@ -62,34 +67,117 @@ function ProfilePage() {
     description: "",
   });
 
-  // --- State sửa quốc gia/ tỉnh ---
-  const [countries, setCountries] = useState([]);
-  const [states, setStates] = useState([]);
+  // --- HOOKS TẢI DỮ LIỆU CHÍNH (ĐÃ TỐI ƯU) ---
 
+  // useEffect 1: Tải dữ liệu hồ sơ chính khi ID, user, hoặc trigger thay đổi.
   useEffect(() => {
-    const loadDropdowns = async () => {
-      const countryList = await odooApi.fetchCountries();
-      setCountries(countryList);
+    const loadProfile = async () => {
+      setIsLoading(true);
+      try {
+        let data, perms;
+        if (employeeId) {
+          // Xem hồ sơ của người khác
+          const response = await odooApi.fetchEmployeeById(employeeId);
+          if (response && response.profile) {
+            data = response.profile;
+            perms = response.permissions;
+          } else {
+            throw new Error("Employee not found");
+          }
+        } else if (user) {
+          // Xem hồ sơ của chính mình
+          data = user;
+          perms = { can_edit: true }; // Luôn có quyền sửa của mình
+        }
 
-      if (user?.country_id?.[0]) {
-        const stateList = await odooApi.fetchStatesByCountry(
-          user.country_id[0]
-        );
-        setStates(stateList);
+        if (data) {
+          const formattedData = {
+            ...data,
+            country_id: data.country_id ? data.country_id[0] : "",
+            private_state_id: data.private_state_id
+              ? data.private_state_id[0]
+              : "",
+          };
+          setProfileData(formattedData);
+          setInitialProfileData(formattedData); // FIX: Lưu trạng thái ban đầu để dùng cho việc "Hủy"
+          setPermissions(perms);
+        }
+      } catch (error) {
+        console.error("Failed to load profile data:", error);
+        setProfileData(null); // Đảm bảo không hiển thị dữ liệu cũ nếu có lỗi
+      } finally {
+        setIsLoading(false);
       }
     };
-    loadDropdowns();
-  }, [user]);
+
+    loadProfile();
+  }, [employeeId, user, refetchTrigger]); // Phụ thuộc vào ID, user và trigger
+
+  // useEffect 2: Tải dữ liệu liên quan (kỹ năng, kinh nghiệm, dropdowns) MỘT LẦN sau khi có profileData.
+  useEffect(() => {
+    if (!profileData) return;
+
+    const loadRelatedData = async () => {
+      setIsSkillsLoading(true);
+      setIsResumeLoading(true);
+
+      // Tải đồng thời kỹ năng, kinh nghiệm và quốc gia để tăng hiệu suất
+      const [skillDetails, resumeLinesData, countryList] = await Promise.all([
+        profileData.employee_skill_ids?.length > 0
+          ? odooApi.fetchEmployeeSkills(profileData.employee_skill_ids)
+          : Promise.resolve([]),
+        profileData.resume_line_ids?.length > 0
+          ? odooApi.fetchEmployeeResumeLines(profileData.resume_line_ids)
+          : Promise.resolve([]),
+        odooApi.fetchCountries(),
+      ]);
+
+      // Xử lý Kỹ năng
+      const grouped = skillDetails.reduce((acc, s) => {
+        const typeName = s.skill_type_id[1];
+        if (!acc[typeName]) acc[typeName] = [];
+        acc[typeName].push(s);
+        return acc;
+      }, {});
+      setSkills(grouped);
+      setIsSkillsLoading(false);
+
+      // Xử lý Kinh nghiệm
+      setResumeLines(resumeLinesData);
+      setIsResumeLoading(false);
+
+      // Xử lý Dropdowns
+      setCountries(countryList);
+      if (profileData.country_id) {
+        const stateList = await odooApi.fetchStatesByCountry(
+          profileData.country_id
+        );
+        setStates(stateList);
+      } else {
+        setStates([]);
+      }
+    };
+
+    loadRelatedData();
+  }, [profileData]); // Chỉ phụ thuộc vào profileData
+
+  // --- CÁC HÀM XỬ LÝ (HANDLERS) ---
+
+  // FIX: Cơ chế làm mới dữ liệu ổn định
+  const forceRefetch = () => {
+    setRefetchTrigger((c) => c + 1);
+  };
 
   const handleCountryChange = async (e) => {
     const countryId = parseInt(e.target.value) || null;
-    setProfileData((prev) => ({ ...prev, country_id: countryId }));
-
+    setProfileData((prev) => ({
+      ...prev,
+      country_id: countryId,
+      private_state_id: "",
+    }));
     if (countryId) {
       const stateList = await odooApi.fetchStatesByCountry(countryId);
       setStates(stateList);
-      // reset state khi đổi country
-      setProfileData((prev) => ({ ...prev, private_state_id: "" }));
     } else {
       setStates([]);
     }
@@ -100,7 +188,6 @@ function ProfilePage() {
     setProfileData((prev) => ({ ...prev, private_state_id: stateId }));
   };
 
-  //Mở Modal khi click vào kỹ năng
   const handleEditResume = (resume) => {
     setResumeToEdit(resume.id);
     setResumeFormData({
@@ -111,85 +198,26 @@ function ProfilePage() {
     });
     setShowResumeModal(true);
   };
-  //Hàm xử lý lưu chỉnh sửa kỹ năng
+
   const handleSaveResume = async () => {
     try {
       if (resumeToEdit) {
-        const safeDescription = resumeFormData.description
-          .trim()
-          .startsWith("<p>")
-          ? resumeFormData.description
-          : `<p>${resumeFormData.description}</p>`;
-
-        // cập nhật
-        await odooApi.updateResumeLine(resumeToEdit, {
-          ...resumeFormData,
-          description: safeDescription,
-        });
+        await odooApi.updateResumeLine(resumeToEdit, resumeFormData);
       } else {
-        // thêm mới (bắt buộc gắn employee_id)
         await odooApi.addResumeLine({
-          employee_id: user.id,
+          employee_id: profileData.id, // Dùng ID từ profileData
           ...resumeFormData,
         });
       }
       setShowResumeModal(false);
       setResumeToEdit(null);
-      forceUpdateData();
+      forceRefetch();
     } catch (error) {
       console.error("Lỗi khi lưu resume:", error);
-      alert(`Lỗi: ${error.message}`);
+      alert("Lưu kinh nghiệm thất bại. Vui lòng thử lại.");
     }
   };
 
-  // === Dữ liệu và logic ===
-  const forceUpdateData = useCallback(async () => {
-    // Hàm này sẽ được gọi sau khi thêm/xóa để làm mới toàn bộ dữ liệu
-    // bằng cách giả lập một lần cập nhật profile, trigger AuthContext làm mới user
-    await handleUpdateProfile({});
-  }, [handleUpdateProfile]);
-
-  useEffect(() => {
-    const loadData = async () => {
-      if (user) {
-        setProfileData({
-          ...user,
-          country_id: user.country_id ? user.country_id[0] : "",
-          private_state_id: user.private_state_id
-            ? user.private_state_id[0]
-            : "",
-        });
-        setIsLoading(false);
-
-        // Tải Kỹ năng
-        if (user.employee_skill_ids?.length > 0) {
-          const details = await odooApi.fetchEmployeeSkills(
-            user.employee_skill_ids
-          );
-          const grouped = details.reduce((acc, s) => {
-            const typeName = s.skill_type_id[1];
-            if (!acc[typeName]) acc[typeName] = [];
-            acc[typeName].push(s);
-            return acc;
-          }, {});
-          setSkills(grouped);
-        }
-        setIsSkillsLoading(false);
-
-        // Tải Kinh nghiệm
-        if (user.resume_line_ids?.length > 0) {
-          const lines = await odooApi.fetchEmployeeResumeLines(
-            user.resume_line_ids
-          );
-          setResumeLines(lines);
-        }
-        setIsResumeLoading(false);
-      }
-    };
-    loadData();
-  }, [user]);
-
-  // === Xử lý cho Modal Thêm Kỹ năng ===
   const handleShowSkillModal = async () => {
     const types = await odooApi.fetchSkillTypes();
     setSkillTypes(types);
@@ -197,7 +225,6 @@ function ProfilePage() {
   };
 
   const handleSkillTypeChange = async (typeId) => {
-    // 1. Reset tất cả các state con
     setNewSkillData({
       skill_type_id: typeId,
       skill_id: "",
@@ -205,13 +232,11 @@ function ProfilePage() {
     });
     setSkillsForType([]);
     setLevelsForSkill([]);
-
-    // 2. Nếu có chọn một loại, tải đồng thời cả Tên kỹ năng và Cấp độ
     if (typeId) {
       const id = parseInt(typeId);
       const [skills, levels] = await Promise.all([
         odooApi.fetchSkillsByType(id),
-        odooApi.fetchSkillLevelsByType(id), // Logic đúng
+        odooApi.fetchSkillLevelsByType(id),
       ]);
       setSkillsForType(skills);
       setLevelsForSkill(levels);
@@ -219,27 +244,20 @@ function ProfilePage() {
   };
 
   const handleSkillChange = async (skillId) => {
-    // Reset lựa chọn cấp độ
     setNewSkillData((prev) => ({
       ...prev,
       skill_id: skillId,
       skill_level_id: "",
     }));
-    setSkillToUpdateId(null); // Reset ID cần update
-
+    setSkillToUpdateId(null);
     if (skillId) {
       const parsedSkillId = parseInt(skillId);
-
-      // Kiểm tra xem kỹ năng vừa chọn đã tồn tại trong danh sách kỹ năng của user chưa
       const allSkills = Object.values(skills).flat();
       const existingSkill = allSkills.find(
         (s) => s.skill_id[0] === parsedSkillId
       );
-
       if (existingSkill) {
-        // Nếu đã tồn tại, lưu lại ID của dòng hr.employee.skill để CẬP NHẬT
         setSkillToUpdateId(existingSkill.id);
-        // Đồng thời gán sẵn skill_level_id hiện tại để hiển thị
         setNewSkillData((prev) => ({
           ...prev,
           skill_level_id: existingSkill.skill_level_id[0],
@@ -249,76 +267,60 @@ function ProfilePage() {
   };
 
   const handleEditSkill = async (skill) => {
-    // Tải toàn bộ skill type (để populate dropdown)
     const types = await odooApi.fetchSkillTypes();
     setSkillTypes(types);
-
-    // Tải skills và levels theo type hiện tại
-    const [skills, levels] = await Promise.all([
+    const [skillsList, levelsList] = await Promise.all([
       odooApi.fetchSkillsByType(skill.skill_type_id[0]),
       odooApi.fetchSkillLevelsByType(skill.skill_type_id[0]),
     ]);
-    setSkillsForType(skills);
-    setLevelsForSkill(levels);
-
-    // Gán dữ liệu skill đang edit
+    setSkillsForType(skillsList);
+    setLevelsForSkill(levelsList);
     setNewSkillData({
       skill_type_id: skill.skill_type_id[0],
       skill_id: skill.skill_id[0],
       skill_level_id: skill.skill_level_id[0],
     });
     setSkillToUpdateId(skill.id);
-
-    // Mở modal
     setShowSkillModal(true);
   };
 
   const handleSaveNewSkill = async () => {
-    if (
-      !newSkillData.skill_type_id ||
-      !newSkillData.skill_id ||
-      !newSkillData.skill_level_id
-    ) {
-      alert("Vui lòng chọn đầy đủ loại, kỹ năng và cấp độ.");
+    if (!newSkillData.skill_id || !newSkillData.skill_level_id) {
+      alert("Vui lòng chọn đầy đủ kỹ năng và cấp độ.");
       return;
     }
-
-    const newLevelId = parseInt(newSkillData.skill_level_id);
-
     try {
       if (skillToUpdateId) {
-        // TRƯỜNG HỢP 1: CẬP NHẬT kỹ năng đã có
         await odooApi.updateEmployeeSkill(skillToUpdateId, {
-          skill_level_id: newLevelId,
+          skill_level_id: parseInt(newSkillData.skill_level_id),
         });
       } else {
-        // TRƯỜNG HỢP 2: THÊM MỚI kỹ năng chưa có
         await odooApi.addEmployeeSkill({
-          employee_id: user.id,
+          employee_id: profileData.id,
           skill_id: parseInt(newSkillData.skill_id),
-          skill_level_id: newLevelId,
-          skill_type_id: parseInt(newSkillData.skill_type_id), // BẮT BUỘC
+          skill_level_id: parseInt(newSkillData.skill_level_id),
+          skill_type_id: parseInt(newSkillData.skill_type_id),
         });
       }
       setShowSkillModal(false);
-      forceUpdateData(); // Tải lại toàn bộ dữ liệu để đồng bộ
+      forceRefetch();
     } catch (error) {
       console.error("Lỗi khi lưu kỹ năng:", error);
-      alert(`Lỗi: ${error.message}`);
+      alert("Lưu kỹ năng thất bại. Vui lòng thử lại.");
     }
   };
 
   const handleDeleteSkill = async (skillLineId) => {
     if (window.confirm("Bạn có chắc chắn muốn xóa kỹ năng này?")) {
       await odooApi.deleteEmployeeSkill(skillLineId);
-      forceUpdateData(); // Tải lại dữ liệu
+      forceRefetch();
     }
   };
 
   const handleDeleteResume = async (resumeLineId) => {
     if (window.confirm("Bạn có chắc chắn muốn xóa kinh nghiệm này?")) {
       await odooApi.deleteResumeLine(resumeLineId);
-      forceUpdateData(); // Tải lại dữ liệu
+      forceRefetch();
     }
   };
 
@@ -328,32 +330,32 @@ function ProfilePage() {
   };
 
   const handleSave = async () => {
+    const targetId = profileData.id;
     const changedData = {};
+
     Object.keys(profileData).forEach((key) => {
-      if (profileData[key] !== user[key]) {
+      if (profileData[key] !== initialProfileData[key]) {
         changedData[key] = profileData[key];
       }
     });
 
-    // giữ nguyên tên field đúng với Odoo
-    if (changedData.country_id) {
-      changedData.country_id = parseInt(changedData.country_id);
-    }
-    if (changedData.private_state_id) {
-      changedData.private_state_id = parseInt(changedData.private_state_id);
-    }
-
     if (Object.keys(changedData).length > 0) {
-      await handleUpdateProfile(changedData);
+      await handleUpdateProfile(targetId, changedData);
     }
     setIsEditing(false);
   };
 
   const handleCancel = () => {
-    setProfileData(user);
+    setProfileData(initialProfileData);
     setIsEditing(false);
   };
 
+  const handleEditClick = () => {
+    setInitialProfileData(profileData);
+    setIsEditing(true);
+  };
+
+  // --- RENDER ---
   if (isLoading) {
     return (
       <Container className="d-flex justify-content-center my-5">
@@ -362,20 +364,26 @@ function ProfilePage() {
     );
   }
 
-  const canEdit = true;
+  if (!profileData) {
+    return (
+      <Container className="my-4">
+        <Alert variant="danger">
+          Không thể tải thông tin hồ sơ. Vui lòng thử lại.
+        </Alert>
+      </Container>
+    );
+  }
 
   return (
     <>
       <Container className="my-4">
         <Card>
           <Card.Body>
-            {/* THÔNG BÁO CẬP NHẬT */}
             {updateSuccess && (
               <Alert variant="success">Cập nhật thông tin thành công!</Alert>
             )}
             {updateError && <Alert variant="danger">{updateError}</Alert>}
 
-            {/* VÙNG THÔNG TIN CHÍNH */}
             <Row className="mb-4 align-items-center">
               <Col md={3} className="text-center">
                 <Image
@@ -402,7 +410,7 @@ function ProfilePage() {
                     name="name"
                     value={profileData?.name || ""}
                     onChange={handleInputChange}
-                    readOnly={!isEditing || !canEdit}
+                    readOnly={!isEditing || !permissions.can_edit}
                     className="h1 bg-transparent border-0 ps-0 fw-bold"
                   />
                 </Form.Group>
@@ -413,7 +421,7 @@ function ProfilePage() {
                     name="job_title"
                     value={profileData.job_title || ""}
                     onChange={handleInputChange}
-                    readOnly={!isEditing || !canEdit}
+                    readOnly={!isEditing || !permissions.can_edit}
                     className="bg-transparent border-0 ps-0 text-muted fs-4"
                   />
                 </Form.Group>
@@ -424,7 +432,6 @@ function ProfilePage() {
               defaultActiveKey="work_info"
               id="profile-tabs"
               className="mb-3">
-              {/* Tab 1: Thông tin công việc */}
               <Tab eventKey="work_info" title="Thông tin công việc">
                 <Form>
                   <Row>
@@ -480,7 +487,7 @@ function ProfilePage() {
                           name="work_phone"
                           value={profileData.work_phone || ""}
                           onChange={handleInputChange}
-                          readOnly={!isEditing || !canEdit}
+                          readOnly={!isEditing || !permissions.can_edit}
                         />
                       </Form.Group>
                       <Form.Group className="mb-3">
@@ -490,7 +497,7 @@ function ProfilePage() {
                           name="mobile_phone"
                           value={profileData.mobile_phone || ""}
                           onChange={handleInputChange}
-                          readOnly={!isEditing || !canEdit}
+                          readOnly={!isEditing || !permissions.can_edit}
                         />
                       </Form.Group>
                       <Form.Group className="mb-3">
@@ -510,7 +517,6 @@ function ProfilePage() {
                 </Form>
               </Tab>
 
-              {/* Tab 2: Thông tin cá nhân */}
               <Tab eventKey="private_info" title="Thông Tin Cá Nhân">
                 <Form>
                   <Row>
@@ -523,7 +529,7 @@ function ProfilePage() {
                           name="private_street"
                           value={profileData.private_street || ""}
                           onChange={handleInputChange}
-                          readOnly={!isEditing || !canEdit}
+                          readOnly={!isEditing || !permissions.can_edit}
                         />
                       </Form.Group>
                       <Form.Group className="mb-3">
@@ -533,7 +539,7 @@ function ProfilePage() {
                           name="private_street2"
                           value={profileData.private_street2 || ""}
                           onChange={handleInputChange}
-                          readOnly={!isEditing || !canEdit}
+                          readOnly={!isEditing || !permissions.can_edit}
                         />
                       </Form.Group>
                       <Form.Group className="mb-3">
@@ -543,7 +549,9 @@ function ProfilePage() {
                           value={profileData.private_state_id || ""}
                           onChange={handleStateChange}
                           disabled={
-                            !isEditing || !canEdit || states.length === 0
+                            !isEditing ||
+                            !permissions.can_edit ||
+                            states.length === 0
                           }>
                           <option value="">-- Chọn Tỉnh/Thành --</option>
                           {states.map((s) => (
@@ -560,7 +568,7 @@ function ProfilePage() {
                           name="private_email"
                           value={profileData.private_email || ""}
                           onChange={handleInputChange}
-                          readOnly={!isEditing || !canEdit}
+                          readOnly={!isEditing || !permissions.can_edit}
                         />
                       </Form.Group>
                       <Form.Group className="mb-3">
@@ -570,7 +578,7 @@ function ProfilePage() {
                           name="private_phone"
                           value={profileData.private_phone || ""}
                           onChange={handleInputChange}
-                          readOnly={!isEditing || !canEdit}
+                          readOnly={!isEditing || !permissions.can_edit}
                         />
                       </Form.Group>
 
@@ -582,7 +590,7 @@ function ProfilePage() {
                           name="emergency_contact"
                           value={profileData.emergency_contact || ""}
                           onChange={handleInputChange}
-                          readOnly={!isEditing || !canEdit}
+                          readOnly={!isEditing || !permissions.can_edit}
                         />
                       </Form.Group>
                       <Form.Group className="mb-3">
@@ -592,7 +600,7 @@ function ProfilePage() {
                           name="emergency_phone"
                           value={profileData.emergency_phone || ""}
                           onChange={handleInputChange}
-                          readOnly={!isEditing || !canEdit}
+                          readOnly={!isEditing || !permissions.can_edit}
                         />
                       </Form.Group>
                     </Col>
@@ -604,7 +612,7 @@ function ProfilePage() {
                           name="country_id"
                           value={profileData.country_id || ""}
                           onChange={handleCountryChange}
-                          disabled={!isEditing || !canEdit}>
+                          disabled={!isEditing || !permissions.can_edit}>
                           <option value="">-- Chọn Quốc gia --</option>
                           {countries.map((c) => (
                             <option key={c.id} value={c.id}>
@@ -620,7 +628,7 @@ function ProfilePage() {
                           name="identification_id"
                           value={profileData.identification_id || ""}
                           onChange={handleInputChange}
-                          readOnly={!isEditing || !canEdit}
+                          readOnly={!isEditing || !permissions.can_edit}
                         />
                       </Form.Group>
                       <Form.Group className="mb-3">
@@ -630,7 +638,7 @@ function ProfilePage() {
                           name="passport_id"
                           value={profileData.passport_id || ""}
                           onChange={handleInputChange}
-                          readOnly={!isEditing || !canEdit}
+                          readOnly={!isEditing || !permissions.can_edit}
                         />
                       </Form.Group>
                       <Form.Group className="mb-3">
@@ -639,7 +647,7 @@ function ProfilePage() {
                           name="gender"
                           value={profileData.gender || ""}
                           onChange={handleInputChange}
-                          disabled={!isEditing || !canEdit}>
+                          disabled={!isEditing || !permissions.can_edit}>
                           <option value="">-- Chọn --</option>
                           <option value="male">Nam</option>
                           <option value="female">Nữ</option>
@@ -653,7 +661,7 @@ function ProfilePage() {
                           name="birthday"
                           value={profileData.birthday || ""}
                           onChange={handleInputChange}
-                          readOnly={!isEditing || !canEdit}
+                          readOnly={!isEditing || !permissions.can_edit}
                         />
                       </Form.Group>
                       <Form.Group className="mb-3">
@@ -662,7 +670,7 @@ function ProfilePage() {
                           name="marital"
                           value={profileData.marital || ""}
                           onChange={handleInputChange}
-                          disabled={!isEditing || !canEdit}>
+                          disabled={!isEditing || !permissions.can_edit}>
                           <option value="">-- Chọn --</option>
                           <option value="single">Độc thân</option>
                           <option value="married">Đã kết hôn</option>
@@ -680,7 +688,7 @@ function ProfilePage() {
                             name="spouse_complete_name"
                             value={profileData.spouse_complete_name || ""}
                             onChange={handleInputChange}
-                            readOnly={!isEditing || !canEdit}
+                            readOnly={!isEditing || !permissions.can_edit}
                           />
                         </Form.Group>
                       )}
@@ -690,7 +698,7 @@ function ProfilePage() {
                           name="certificate"
                           value={profileData.certificate || ""}
                           onChange={handleInputChange}
-                          disabled={!isEditing || !canEdit}>
+                          disabled={!isEditing || !permissions.can_edit}>
                           <option value="">-- Chọn --</option>
                           <option value="graduate">Tốt nghiệp Phổ thông</option>
                           <option value="bachelor">Cử nhân</option>
@@ -706,7 +714,7 @@ function ProfilePage() {
                           name="study_field"
                           value={profileData.study_field || ""}
                           onChange={handleInputChange}
-                          readOnly={!isEditing || !canEdit}
+                          readOnly={!isEditing || !permissions.can_edit}
                         />
                       </Form.Group>
                       <Form.Group className="mb-3">
@@ -716,7 +724,7 @@ function ProfilePage() {
                           name="study_school"
                           value={profileData.study_school || ""}
                           onChange={handleInputChange}
-                          readOnly={!isEditing || !canEdit}
+                          readOnly={!isEditing || !permissions.can_edit}
                         />
                       </Form.Group>
                     </Col>
@@ -726,13 +734,14 @@ function ProfilePage() {
 
               <Tab eventKey="skills_resume" title="Kỹ năng & Kinh nghiệm">
                 <Row className="p-3">
-                  {/* === PHẦN KỸ NĂNG === */}
                   <Col md={6}>
                     <div className="d-flex justify-content-between align-items-center mb-3">
                       <h4>Kỹ năng</h4>
-                      <Button variant="link" onClick={handleShowSkillModal}>
-                        <FaPlusCircle /> Thêm
-                      </Button>
+                      {permissions.can_edit && (
+                        <Button variant="link" onClick={handleShowSkillModal}>
+                          <FaPlusCircle /> Thêm
+                        </Button>
+                      )}
                     </div>
                     {isSkillsLoading ? (
                       <Spinner size="sm" />
@@ -744,16 +753,27 @@ function ProfilePage() {
                             <div key={skill.id} className="mb-3">
                               <div className="d-flex justify-content-between">
                                 <span
-                                  className="cursor-pointer text-primary"
-                                  onClick={() => handleEditSkill(skill)}>
+                                  className={
+                                    permissions.can_edit
+                                      ? "cursor-pointer text-primary"
+                                      : ""
+                                  }
+                                  onClick={() =>
+                                    permissions.can_edit &&
+                                    handleEditSkill(skill)
+                                  }>
                                   {skill.skill_id[1]}
                                 </span>
                                 <small className="d-flex align-items-center">
                                   {skill.skill_level_id[1]}
-                                  <FaTrash
-                                    className="ms-2 text-danger cursor-pointer"
-                                    onClick={() => handleDeleteSkill(skill.id)}
-                                  />
+                                  {permissions.can_edit && (
+                                    <FaTrash
+                                      className="ms-2 text-danger cursor-pointer"
+                                      onClick={() =>
+                                        handleDeleteSkill(skill.id)
+                                      }
+                                    />
+                                  )}
                                 </small>
                               </div>
                               <ProgressBar
@@ -769,11 +789,16 @@ function ProfilePage() {
                     )}
                   </Col>
 
-                  {/* === PHẦN SƠ YẾU LÝ LỊCH === */}
                   <Col md={6}>
                     <div className="d-flex justify-content-between align-items-center mb-3">
                       <h4>Kinh nghiệm</h4>
-                      {/* Nút thêm kinh nghiệm có thể được thêm ở đây */}
+                      {permissions.can_edit && (
+                        <Button
+                          variant="link"
+                          onClick={() => setShowResumeModal(true)}>
+                          <FaPlusCircle /> Thêm
+                        </Button>
+                      )}
                     </div>
                     {isResumeLoading ? (
                       <Spinner size="sm" />
@@ -781,17 +806,23 @@ function ProfilePage() {
                       resumeLines.map((line) => (
                         <div
                           key={line.id}
-                          className="mb-3 border-bottom pb-2 cursor-pointer"
-                          onClick={() => handleEditResume(line)}>
+                          className={`mb-3 border-bottom pb-2 ${
+                            permissions.can_edit ? "cursor-pointer" : ""
+                          }`}
+                          onClick={() =>
+                            permissions.can_edit && handleEditResume(line)
+                          }>
                           <div className="d-flex justify-content-between">
                             <h6 className="fw-bold">{line.name}</h6>
-                            <FaTrash
-                              className="text-danger cursor-pointer"
-                              onClick={(e) => {
-                                e.stopPropagation(); // tránh mở modal khi bấm xoá
-                                handleDeleteResume(line.id);
-                              }}
-                            />
+                            {permissions.can_edit && (
+                              <FaTrash
+                                className="text-danger cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteResume(line.id);
+                                }}
+                              />
+                            )}
                           </div>
                           <p className="text-muted small">
                             {line.date_start} - {line.date_end || "Hiện tại"}
@@ -810,7 +841,6 @@ function ProfilePage() {
                 </Row>
               </Tab>
 
-              {/* Tab 3: Cài đặt nhân sự */}
               <Tab eventKey="hr_settings" title="Cài Đặt Nhân Sự">
                 <Form>
                   <Row>
@@ -822,7 +852,7 @@ function ProfilePage() {
                           name="employee_type"
                           value={profileData.employee_type || ""}
                           onChange={handleInputChange}
-                          disabled={!isEditing || !canEdit}>
+                          disabled={!isEditing || !permissions.can_edit}>
                           <option value="">-- Chọn --</option>
                           <option value="employee">Nhân viên</option>
                           <option value="contractor">
@@ -845,7 +875,7 @@ function ProfilePage() {
                           placeholder="Mã PIN để chấm công"
                           value={profileData.pin || ""}
                           onChange={handleInputChange}
-                          readOnly={!isEditing || !canEdit}
+                          readOnly={!isEditing || !permissions.can_edit}
                         />
                       </Form.Group>
                       <Form.Group className="mb-3">
@@ -856,7 +886,7 @@ function ProfilePage() {
                           placeholder="Mã vạch định danh nhân viên"
                           value={profileData.barcode || ""}
                           onChange={handleInputChange}
-                          readOnly={!isEditing || !canEdit}
+                          readOnly={!isEditing || !permissions.can_edit}
                         />
                       </Form.Group>
                     </Col>
@@ -865,14 +895,13 @@ function ProfilePage() {
               </Tab>
             </Tabs>
 
-            {/* Nút bấm điều khiển */}
             <div className="text-end mt-4">
-              {canEdit && !isEditing && (
-                <Button variant="primary" onClick={() => setIsEditing(true)}>
+              {permissions.can_edit && !isEditing && (
+                <Button variant="primary" onClick={handleEditClick}>
                   Chỉnh Sửa
                 </Button>
               )}
-              {canEdit && isEditing && (
+              {permissions.can_edit && isEditing && (
                 <>
                   <Button
                     variant="secondary"
@@ -906,7 +935,6 @@ function ProfilePage() {
         </Card>
       </Container>
 
-      {/* === MODAL THÊM KỸ NĂNG === */}
       <Modal
         show={showSkillModal}
         onHide={() => setShowSkillModal(false)}
@@ -973,6 +1001,7 @@ function ProfilePage() {
           </Button>
         </Modal.Footer>
       </Modal>
+
       <Modal
         show={showResumeModal}
         onHide={() => setShowResumeModal(false)}
