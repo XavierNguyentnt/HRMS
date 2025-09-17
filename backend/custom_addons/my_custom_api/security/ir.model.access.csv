@@ -1,2 +1,3 @@
-id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink,perm_delete
 access_project_task_user,project.task.user,model_project_task,base.group_user,1,1,1,1
+access_preapproved_employee_manager,hr.preapproved.employee manager access,model_hr_preapproved_employee,hr.group_hr_manager,1,1,1,1

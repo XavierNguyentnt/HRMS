@@ -1,161 +1,102 @@
-// src/components/Pages/Auth/RegisterPage.jsx
-
+// src/components/Pages/Auth/RegisterPage.js
 import React, { useState } from "react";
-import { Link } from "react-router-dom"; // Bỏ useNavigate vì không cần nữa
-import {
-  Container,
-  Row,
-  Col,
-  Card,
-  Form,
-  Button,
-  Spinner,
-  Alert,
-} from "react-bootstrap";
-import { useAuth } from "../../../contexts/AuthContext";
-import "./AuthPages.css";
+import { Link } from "react-router-dom";
+import { Form, Button, Card, Container, Spinner, Alert } from "react-bootstrap";
+import * as odooApi from "../../../services/odooAPI";
 
 function RegisterPage() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
 
-  // Thêm state mới để lưu thông báo thành công
-  const [successMessage, setSuccessMessage] = useState("");
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
-  const [localError, setLocalError] = useState("");
-  const { handleRegister, isRegisterLoading, registerError } = useAuth();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-
-    // Xóa các thông báo cũ
-    setLocalError("");
-    setSuccessMessage("");
-
-    if (password !== confirmPassword) {
-      setLocalError("Mật khẩu xác nhận không khớp!");
-      return;
-    }
-
-    const success = await handleRegister({ name, email, password });
-
-    if (success) {
-      // Thay vì điều hướng, chúng ta sẽ set thông báo thành công
-      setSuccessMessage(
-        "Đăng ký thành công! Vui lòng quay lại trang đăng nhập để tiếp tục."
-      );
+    try {
+      const result = await odooApi.registerEmployee(formData);
+      setSuccess(result.message);
+      setFormData({ name: "", email: "", password: "" }); // Xóa form sau khi thành công
+    } catch (err) {
+      setError(err.message || "Đăng ký không thành công. Vui lòng thử lại.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="auth-wrapper">
-      <Container className="d-flex align-items-center justify-content-center">
-        <Row className="justify-content-center w-100">
-          <Col md={6} lg={5} xl={4}>
-            <Card className="shadow-lg border-0">
-              <Card.Body className="p-4 p-sm-5">
-                <h2 className="text-center mb-4 fw-bold">Tạo tài khoản</h2>
+    <Container
+      className="d-flex align-items-center justify-content-center"
+      style={{ minHeight: "100vh" }}>
+      <div className="w-100" style={{ maxWidth: "400px" }}>
+        <Card>
+          <Card.Body>
+            <h2 className="text-center mb-4">Đăng ký tài khoản</h2>
 
-                {/* Dựa vào `successMessage` để hiển thị form hoặc thông báo */}
-                {successMessage ? (
-                  // Giao diện khi đăng ký thành công
-                  <div className="text-center">
-                    <Alert variant="success">{successMessage}</Alert>
-                    <Link to="/login">
-                      <Button variant="primary" size="lg">
-                        Đi đến trang Đăng nhập
-                      </Button>
-                    </Link>
-                  </div>
-                ) : (
-                  // Giao diện form đăng ký
-                  <Form onSubmit={handleSubmit} noValidate>
-                    <Form.Group className="mb-3" controlId="name">
-                      <Form.Label>Họ và Tên</Form.Label>
-                      <Form.Control
-                        type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        required
-                        size="lg"
-                        placeholder="Nhập họ và tên"
-                      />
-                    </Form.Group>
-                    <Form.Group className="mb-3" controlId="email">
-                      <Form.Label>Email</Form.Label>
-                      <Form.Control
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        size="lg"
-                        placeholder="Nhập email"
-                      />
-                    </Form.Group>
-                    <Form.Group className="mb-3" controlId="password">
-                      <Form.Label>Mật khẩu</Form.Label>
-                      <Form.Control
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        size="lg"
-                        placeholder="Nhập mật khẩu"
-                      />
-                    </Form.Group>
-                    <Form.Group className="mb-3" controlId="confirmPassword">
-                      <Form.Label>Xác nhận Mật khẩu</Form.Label>
-                      <Form.Control
-                        type="password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        required
-                        size="lg"
-                        placeholder="Nhập lại mật khẩu"
-                      />
-                    </Form.Group>
+            {error && <Alert variant="danger">{error}</Alert>}
+            {success && <Alert variant="success">{success}</Alert>}
 
-                    {(localError || registerError) && (
-                      <Alert variant="danger">
-                        {localError || registerError}
-                      </Alert>
-                    )}
+            {!success && ( // Ẩn form đi sau khi đã đăng ký thành công
+              <Form onSubmit={handleSubmit}>
+                <Form.Group id="name" className="mb-3">
+                  <Form.Label>Họ và tên</Form.Label>
+                  <Form.Control
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    required
+                  />
+                </Form.Group>
 
-                    <div className="d-grid mt-4">
-                      <Button
-                        variant="primary"
-                        type="submit"
-                        disabled={isRegisterLoading}
-                        size="lg">
-                        {isRegisterLoading ? (
-                          <>
-                            <Spinner
-                              as="span"
-                              animation="border"
-                              size="sm"
-                              role="status"
-                              aria-hidden="true"
-                            />
-                            <span className="ms-2">Đang xử lý...</span>
-                          </>
-                        ) : (
-                          "Đăng ký"
-                        )}
-                      </Button>
-                    </div>
-                    <div className="mt-4 text-center">
-                      Đã có tài khoản? <Link to="/login">Đăng nhập</Link>
-                    </div>
-                  </Form>
-                )}
-              </Card.Body>
-            </Card>
-          </Col>
-        </Row>
-      </Container>
-    </div>
+                <Form.Group id="email" className="mb-3">
+                  <Form.Label>Địa chỉ email</Form.Label>
+                  <Form.Control
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    required
+                  />
+                </Form.Group>
+
+                <Form.Group id="password" className="mb-3">
+                  <Form.Label>Mật khẩu</Form.Label>
+                  <Form.Control
+                    type="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                  />
+                </Form.Group>
+
+                <Button
+                  disabled={isLoading}
+                  className="w-100 mt-3"
+                  type="submit">
+                  {isLoading ? <Spinner as="span" size="sm" /> : "Đăng ký"}
+                </Button>
+              </Form>
+            )}
+          </Card.Body>
+        </Card>
+        <div className="w-100 text-center mt-2">
+          Đã có tài khoản? <Link to="/login">Đăng nhập</Link>
+        </div>
+      </div>
+    </Container>
   );
 }
 

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_preapproved_employee_tree" model="ir.ui.view">
+        <field name="name">hr.preapproved.employee.tree</field>
+        <field name="model">hr.preapproved.employee</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="email"/>
+                <field name="state"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="action_preapproved_employee" model="ir.actions.act_window">
+        <field name="name">Danh sách Email được duyệt</field>
+        <field name="res_model">hr.preapproved.employee</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <menuitem id="menu_preapproved_employee" name="Email được duyệt"
+        parent="hr.menu_hr_configuration" action="action_preapproved_employee" sequence="99"/>
+</odoo>

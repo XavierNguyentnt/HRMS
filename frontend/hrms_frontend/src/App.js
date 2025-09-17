@@ -7,11 +7,14 @@ import PrivateRoute from "./components/Routes/PrivateRoute";
 // Import các component
 import Header from "./components/Pages/Commons/Header";
 import LoginPage from "./components/Pages/Auth/LoginPage";
-// import RegisterPage from "./components/Pages/Auth/RegisterPage";
+import RegisterPage from "./components/Pages/Auth/RegisterPage";
 import ProfilePage from "./components/Pages/User/ProfilePage";
 import DashboardPage from "./components/Pages/Dashboards/DashboardPage";
 import DepartmentsPage from "./components/Pages/Department/DepartmentsPage";
 import EmployeesPage from "./components/Pages/Employee/EmployeesPage";
+
+//Admin
+import WhitelistManager from "./components/Pages/Admin/WhitelistManager";
 
 // =================================================================
 // Component Layout chính: Render Header và nội dung các trang con
@@ -39,10 +42,10 @@ function App() {
           path="/login"
           element={user ? <Navigate to="/dashboard" /> : <LoginPage />}
         />
-        {/* <Route
+        <Route
           path="/register"
-          element={user ? <Navigate to="/dashboard" /> : <RegisterPage />}
-        /> */}
+          element={user ? <Navigate to="/register" /> : <RegisterPage />}
+        />
 
         {/* CÁC ROUTE ĐƯỢC BẢO VỆ (SỬ DỤNG MAINLAYOUT VÀ CÓ HEADER) */}
         <Route
@@ -68,6 +71,7 @@ function App() {
           />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="profile/:employeeId" element={<ProfilePage />} />
+          <Route path="whitelist" element={<WhitelistManager />} />
 
           {/* Khi cần thêm trang mới có Header, chỉ cần thêm vào đây:
             <Route path="projects" element={<ProjectsPage />} /> 
