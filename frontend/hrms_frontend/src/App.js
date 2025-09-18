@@ -7,7 +7,7 @@ import PrivateRoute from "./components/Routes/PrivateRoute";
 // Import các component
 import Header from "./components/Pages/Commons/Header";
 import LoginPage from "./components/Pages/Auth/LoginPage";
-// import RegisterPage from "./components/Pages/Auth/RegisterPage";
+import RegisterPage from "./components/Pages/Auth/RegisterPage";
 import ProfilePage from "./components/Pages/User/ProfilePage";
 import DashboardPage from "./components/Pages/Dashboards/DashboardPage";
 import DepartmentsPage from "./components/Pages/Department/DepartmentsPage";
@@ -39,10 +39,10 @@ function App() {
           path="/login"
           element={user ? <Navigate to="/dashboard" /> : <LoginPage />}
         />
-        {/* <Route
+        <Route
           path="/register"
           element={user ? <Navigate to="/dashboard" /> : <RegisterPage />}
-        /> */}
+        />
 
         {/* CÁC ROUTE ĐƯỢC BẢO VỆ (SỬ DỤNG MAINLAYOUT VÀ CÓ HEADER) */}
         <Route

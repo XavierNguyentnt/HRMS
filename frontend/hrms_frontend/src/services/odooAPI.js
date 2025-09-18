@@ -625,3 +625,25 @@ export const archiveEmployee = async (employeeId) => {
   if (response.data.error) throw new Error(response.data.error.data.message);
   return response.data.result; // Trả về true
 };
+
+/**
+ * Gửi yêu cầu đăng ký tài khoản mới.
+ * @param {object} signupData - Dữ liệu đăng ký { name, email, password }
+ */
+export const registerUser = async (signupData) => {
+  const params = {
+    ...signupData,
+  };
+  // Giả sử URL.API_SIGNUP = '/api/signup'
+  const response = await axiosInstance.post(URL.API_SIGNUP, {
+    jsonrpc: "2.0",
+    params,
+  });
+
+  // Xử lý lỗi trả về từ controller
+  if (response.data.error) {
+    throw new Error(response.data.error.data.details || "Đã có lỗi xảy ra.");
+  }
+
+  return response.data.result;
+};

@@ -1,7 +1,7 @@
-// src/components/Pages/Auth/RegisterPage.jsx
+// src/components/Pages/Auth/RegisterPage.js
 
 import React, { useState } from "react";
-import { Link } from "react-router-dom"; // Bỏ useNavigate vì không cần nữa
+import { Link } from "react-router-dom";
 import {
   Container,
   Row,
@@ -21,16 +21,12 @@ function RegisterPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  // Thêm state mới để lưu thông báo thành công
   const [successMessage, setSuccessMessage] = useState("");
-
   const [localError, setLocalError] = useState("");
   const { handleRegister, isRegisterLoading, registerError } = useAuth();
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-
-    // Xóa các thông báo cũ
     setLocalError("");
     setSuccessMessage("");
 
@@ -42,9 +38,8 @@ function RegisterPage() {
     const success = await handleRegister({ name, email, password });
 
     if (success) {
-      // Thay vì điều hướng, chúng ta sẽ set thông báo thành công
       setSuccessMessage(
-        "Đăng ký thành công! Vui lòng quay lại trang đăng nhập để tiếp tục."
+        "Tài khoản đăng ký thành công, vui lòng chờ Quản trị viên phê duyệt."
       );
     }
   };
@@ -56,23 +51,22 @@ function RegisterPage() {
           <Col md={6} lg={5} xl={4}>
             <Card className="shadow-lg border-0">
               <Card.Body className="p-4 p-sm-5">
-                <h2 className="text-center mb-4 fw-bold">Tạo tài khoản</h2>
+                <h2 className="text-center mb-4">Đăng Ký Tài Khoản</h2>
 
-                {/* Dựa vào `successMessage` để hiển thị form hoặc thông báo */}
                 {successMessage ? (
-                  // Giao diện khi đăng ký thành công
-                  <div className="text-center">
-                    <Alert variant="success">{successMessage}</Alert>
-                    <Link to="/login">
-                      <Button variant="primary" size="lg">
-                        Đi đến trang Đăng nhập
-                      </Button>
-                    </Link>
-                  </div>
+                  <Alert variant="success">
+                    <Alert.Heading>Thành công!</Alert.Heading>
+                    <p>{successMessage}</p>
+                    <hr />
+                    <div className="d-flex justify-content-end">
+                      <Link to="/login" className="btn btn-outline-success">
+                        Về trang Đăng nhập
+                      </Link>
+                    </div>
+                  </Alert>
                 ) : (
-                  // Giao diện form đăng ký
-                  <Form onSubmit={handleSubmit} noValidate>
-                    <Form.Group className="mb-3" controlId="name">
+                  <Form onSubmit={handleSubmit}>
+                    <Form.Group className="mb-3">
                       <Form.Label>Họ và Tên</Form.Label>
                       <Form.Control
                         type="text"
@@ -80,10 +74,9 @@ function RegisterPage() {
                         onChange={(e) => setName(e.target.value)}
                         required
                         size="lg"
-                        placeholder="Nhập họ và tên"
                       />
                     </Form.Group>
-                    <Form.Group className="mb-3" controlId="email">
+                    <Form.Group className="mb-3">
                       <Form.Label>Email</Form.Label>
                       <Form.Control
                         type="email"
@@ -91,10 +84,9 @@ function RegisterPage() {
                         onChange={(e) => setEmail(e.target.value)}
                         required
                         size="lg"
-                        placeholder="Nhập email"
                       />
                     </Form.Group>
-                    <Form.Group className="mb-3" controlId="password">
+                    <Form.Group className="mb-3">
                       <Form.Label>Mật khẩu</Form.Label>
                       <Form.Control
                         type="password"
@@ -102,10 +94,9 @@ function RegisterPage() {
                         onChange={(e) => setPassword(e.target.value)}
                         required
                         size="lg"
-                        placeholder="Nhập mật khẩu"
                       />
                     </Form.Group>
-                    <Form.Group className="mb-3" controlId="confirmPassword">
+                    <Form.Group className="mb-3">
                       <Form.Label>Xác nhận Mật khẩu</Form.Label>
                       <Form.Control
                         type="password"
@@ -113,7 +104,6 @@ function RegisterPage() {
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         required
                         size="lg"
-                        placeholder="Nhập lại mật khẩu"
                       />
                     </Form.Group>
 
@@ -131,13 +121,7 @@ function RegisterPage() {
                         size="lg">
                         {isRegisterLoading ? (
                           <>
-                            <Spinner
-                              as="span"
-                              animation="border"
-                              size="sm"
-                              role="status"
-                              aria-hidden="true"
-                            />
+                            <Spinner as="span" animation="border" size="sm" />
                             <span className="ms-2">Đang xử lý...</span>
                           </>
                         ) : (

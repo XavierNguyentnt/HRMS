@@ -1,15 +1,17 @@
+// src/contexts/AuthContext.js
+
 import React, { createContext, useContext, useState, useEffect } from "react";
+// SỬA LỖI 1: Import từ đúng file và đúng đường dẫn
+import { loginUser, registerUser } from "../api/authAPI";
 import * as odooApi from "../services/odooAPI";
 
-// ĐỊNH NGHĨA CÁC VAI TRÒ (giữ nguyên)
 export const ROLES = {
   ADMIN: "admin",
-  MANAGER: "manager", // Gồm các chức danh quản lý
-  STAFF: "staff", // Gồm các chức danh nhân viên
+  MANAGER: "manager",
+  STAFF: "staff",
   UNKNOWN: "unknown",
 };
 
-// Hàm helper để xác định vai trò từ chức danh (giữ nguyên)
 const getUserRole = (jobTitle) => {
   if (!jobTitle) return ROLES.UNKNOWN;
   const title = jobTitle.toLowerCase();
@@ -34,58 +36,49 @@ const getUserRole = (jobTitle) => {
 
 const AuthContext = createContext(null);
 
+export function useAuth() {
+  return useContext(AuthContext);
+}
+
 export function AuthProvider({ children }) {
-  // --- STATE CHUNG ---
-  const [user, setUser] = useState(() => {
-    try {
-      const savedUser = localStorage.getItem("userSession");
-      return savedUser ? JSON.parse(savedUser) : null;
-    } catch (error) {
-      console.error("Failed to parse user session from localStorage", error);
-      return null;
-    }
-  });
-
-  // THAY ĐỔI 1: THÊM STATE ĐỂ LƯU VAI TRÒ (ROLE) CỦA NGƯỜI DÙNG
+  const [user, setUser] = useState(null);
   const [role, setRole] = useState(ROLES.UNKNOWN);
-
-  // --- CÁC STATE KHÁC GIỮ NGUYÊN ---
   const [isLoginLoading, setIsLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState(null);
   const [isRegisterLoading, setIsRegisterLoading] = useState(false);
   const [registerError, setRegisterError] = useState(null);
+
+  // Các state cho cập nhật profile
   const [isUpdateLoading, setIsUpdateLoading] = useState(false);
   const [updateError, setUpdateError] = useState(null);
   const [updateSuccess, setUpdateSuccess] = useState(false);
 
-  // THAY ĐỔI 2: DÙNG useEffect ĐỂ SET ROLE KHI USER ĐƯỢC TẢI LẠI TỪ LOCALSTORAGE
-  // Điều này đảm bảo khi F5 lại trang, vai trò vẫn được xác định đúng.
   useEffect(() => {
-    if (user && user.job_title) {
-      setRole(getUserRole(user.job_title));
-    } else {
-      setRole(ROLES.UNKNOWN);
+    const storedSession = localStorage.getItem("userSession");
+    if (storedSession) {
+      const sessionData = JSON.parse(storedSession);
+      setUser(sessionData);
+      setRole(getUserRole(sessionData.job_title));
     }
-  }, [user]); // Hook này sẽ chạy mỗi khi object `user` thay đổi.
+  }, []);
 
-  // === CÁC HÀM XỬ LÝ LOGIC ===
-
-  const handleLogin = async (email, password) => {
+  const handleLogin = async (identifier, password) => {
     setIsLoginLoading(true);
     setLoginError(null);
     try {
-      const sessionInfo = await odooApi.login(email, password);
-      const employeeProfile = await odooApi.fetchUserProfile(sessionInfo.uid);
-      const fullUserSession = { ...sessionInfo, ...employeeProfile };
+      // SỬA LỖI 2: Gọi hàm `loginUser` đã import
+      const sessionInfo = await loginUser(identifier, password);
 
-      // THAY ĐỔI 3A: CẬP NHẬT CẢ USER VÀ ROLE SAU KHI ĐĂNG NHẬP THÀNH CÔNG
-      setUser(fullUserSession);
-      setRole(getUserRole(fullUserSession.job_title)); // Xác định vai trò từ chức danh
-      localStorage.setItem("userSession", JSON.stringify(fullUserSession));
+      const profile = await odooApi.fetchUserProfile(sessionInfo.uid);
+      const userSession = { ...sessionInfo, ...profile };
 
-      return fullUserSession;
-    } catch (err) {
-      setLoginError(err.message || "Lỗi kết nối server. Vui lòng thử lại.");
+      setUser(userSession);
+      setRole(getUserRole(userSession.job_title));
+      localStorage.setItem("userSession", JSON.stringify(userSession));
+
+      return userSession;
+    } catch (error) {
+      setLoginError(error.message || "Thông tin đăng nhập không chính xác.");
       return null;
     } finally {
       setIsLoginLoading(false);
@@ -94,16 +87,22 @@ export function AuthProvider({ children }) {
 
   const handleLogout = () => {
     setUser(null);
-    setRole(ROLES.UNKNOWN); // Reset role khi logout
+    setRole(ROLES.UNKNOWN);
     localStorage.removeItem("userSession");
   };
 
-  const handleRegister = async (userData) => {
-    // Logic register không cần thay đổi vì sau khi register thành công
-    // thường sẽ yêu cầu user đăng nhập lại.
+  const handleRegister = async (signupData) => {
     setIsRegisterLoading(true);
     setRegisterError(null);
-    // ... code giữ nguyên ...
+    try {
+      const result = await registerUser(signupData);
+      return result && result.success;
+    } catch (error) {
+      setRegisterError(error.message);
+      return false;
+    } finally {
+      setIsRegisterLoading(false);
+    }
   };
 
   const handleUpdateProfile = async (updateData) => {
@@ -111,7 +110,6 @@ export function AuthProvider({ children }) {
     setUpdateError(null);
     setUpdateSuccess(false);
 
-    // ID của nhân viên (hr.employee) được lưu trong user.id
     if (!user || !user.id) {
       setUpdateError("Không tìm thấy ID nhân viên để cập nhật.");
       setIsUpdateLoading(false);
@@ -123,10 +121,8 @@ export function AuthProvider({ children }) {
       const freshProfile = await odooApi.fetchUserProfile(user.uid);
       const updatedSession = { ...user, ...freshProfile };
 
-      // THAY ĐỔI 3B: CẬP NHẬT CẢ USER VÀ ROLE KHI PROFILE THAY ĐỔI
-      // Quan trọng khi chức danh của người dùng có thể được cập nhật.
       setUser(updatedSession);
-      setRole(getUserRole(updatedSession.job_title)); // Tính toán lại vai trò
+      setRole(getUserRole(updatedSession.job_title));
       localStorage.setItem("userSession", JSON.stringify(updatedSession));
 
       setUpdateSuccess(true);
@@ -140,10 +136,8 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Giá trị cung cấp cho toàn bộ ứng dụng
   const value = {
     user,
-    // THAY ĐỔI 4: CUNG CẤP `role` RA BÊN NGOÀI CONTEXT
     role,
     handleLogout,
     handleLogin,
@@ -159,8 +153,4 @@ export function AuthProvider({ children }) {
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth() {
-  return useContext(AuthContext);
 }

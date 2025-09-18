@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="mail_template_user_signup_approved" model="mail.template">
+            <field name="name">Registration: Account Approved</field>
+            <field name="model_id" ref="base.model_res_users"/>
+            <field name="subject">Tài khoản của bạn tại ${object.company_id.name} đã được phê duyệt!</field>
+            <field name="email_from">"${(object.company_id.email_formatted or user.email_formatted) | safe}"</field>
+            <field name="email_to">${object.email_formatted | safe}</field>
+            <field name="body_html" type="html">
+                <div style="font-family: Arial, sans-serif; font-size: 14px;">
+                    <p>Chào ${object.name},</p>
+                    <p>Chúc mừng! Tài khoản của bạn đã được quản trị viên phê duyệt.</p>
+                    <p>Bây giờ bạn có thể đăng nhập vào hệ thống bằng email và mật khẩu đã đăng ký.</p>
+                    <br/>
+                    <p>Trân trọng,</p>
+                    <p><strong>Ban Quản trị ${object.company_id.name}</strong></p>
+                </div>
+            </field>
+            <field name="auto_delete" eval="True"/>
+        </record>
+    </data>
+</odoo>
