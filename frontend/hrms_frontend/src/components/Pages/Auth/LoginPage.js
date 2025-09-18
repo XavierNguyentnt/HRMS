@@ -89,9 +89,9 @@ function LoginPage() {
                     </Button>
                   </div>
                 </Form>
-                <div className="mt-4 text-center">
+                {/* <div className="mt-4 text-center">
                   Chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link>
-                </div>
+                </div> */}
               </Card.Body>
             </Card>
           </Col>

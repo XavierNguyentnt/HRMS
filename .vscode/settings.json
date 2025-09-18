@@ -1,15 +1,12 @@
 {
   "cSpell.words": [
-    "dbfilter",
     "duan",
     "jsonrequest",
     "keepalive",
     "kwargs",
     "Odoo",
-    "preapproved",
     "sendfile",
-    "ssnid",
-    "superadmin"
+    "ssnid"
   ],
   "CodeGPT.apiKey": "Anthropic"
 }
