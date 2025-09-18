@@ -1,8 +1,7 @@
 const URL = {
-  // THÊM /api/ VÀO ĐÂY
-  API_LOGIN: "/api/web/session/authenticate",
-  API_SIGNUP: "/api/signup",
-  RPC_CALL: "/api/web/dataset/call_kw",
+  API_LOGIN: "/session/authenticate",
+  API_SIGNUP: "/session/signup",
+  RPC_CALL: "/dataset/call_kw", // nếu cần
 
   API_TEST: "/api/v1/test",
   API_PARTNERS: "/api/v1/partners",

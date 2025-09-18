@@ -96,9 +96,16 @@ export function AuthProvider({ children }) {
     setRegisterError(null);
     try {
       const result = await registerUser(signupData);
-      return result && result.success;
+
+      if (result && result.success) {
+        return true;
+      } else {
+        // Nếu backend có trả về thông báo lỗi chi tiết
+        setRegisterError(result.error || "Đăng ký thất bại!");
+        return false;
+      }
     } catch (error) {
-      setRegisterError(error.message);
+      setRegisterError(error.message || "Không thể kết nối đến máy chủ.");
       return false;
     } finally {
       setIsRegisterLoading(false);

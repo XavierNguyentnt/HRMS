@@ -1,5 +1,4 @@
 // src/api/authAPI.js
-
 import axiosInstance from "../util/axios_instance";
 import URL from "../util/url";
 
@@ -7,46 +6,57 @@ const ODOO_DB = process.env.REACT_APP_ODOO_DATABASE;
 
 /**
  * Gửi yêu cầu đăng nhập đến Odoo.
- * @param {string} identifier - Email hoặc login của người dùng
- * @param {string} password - Mật khẩu
  */
 export const loginUser = async (identifier, password) => {
-  const params = {
-    db: ODOO_DB,
-    login: identifier,
-    password: password,
-  };
-  const response = await axiosInstance.post(URL.API_LOGIN, {
-    jsonrpc: "2.0",
-    params,
-  });
+  try {
+    const response = await axiosInstance.post(URL.API_LOGIN, {
+      jsonrpc: "2.0",
+      method: "call", // 🔥 BẮT BUỘC
+      params: {
+        db: ODOO_DB,
+        login: identifier,
+        password: password,
+      },
+    });
 
-  // Nếu Odoo trả về lỗi, ném ra một Error để AuthContext có thể bắt được
-  if (response.data.error) {
-    throw new Error(response.data.error.data.message || "Đăng nhập thất bại");
+    if (response.data.error) {
+      throw new Error(response.data.error.data.message || "Đăng nhập thất bại");
+    }
+
+    return response.data.result; // uid, user_context, db...
+  } catch (err) {
+    throw new Error(err.message || "Không thể kết nối Odoo.");
   }
-
-  // Trả về dữ liệu session nếu thành công
-  return response.data.result;
 };
 
 /**
  * Gửi yêu cầu đăng ký tài khoản mới.
- * @param {object} signupData - Dữ liệu đăng ký { name, email, password }
  */
 export const registerUser = async (signupData) => {
-  const params = {
-    ...signupData,
-  };
-  const response = await axiosInstance.post(URL.API_SIGNUP, {
-    jsonrpc: "2.0",
-    params,
-  });
+  try {
+    const response = await axiosInstance.post(URL.API_SIGNUP, {
+      jsonrpc: "2.0",
+      method: "call",
+      params: {
+        db: ODOO_DB,
+        name: signupData.name,
+        login: signupData.email,
+        password: signupData.password,
+      },
+    });
 
-  // Xử lý lỗi trả về từ controller
-  if (response.data.error) {
-    throw new Error(response.data.error.data.details || "Đã có lỗi xảy ra.");
+    if (response.data.error) {
+      // Lấy message từ backend (nếu có)
+      const errorMessage =
+        response.data.error.data?.message ||
+        response.data.error.data?.details ||
+        "Đã có lỗi xảy ra.";
+      return { success: false, error: errorMessage };
+    }
+
+    // Trường hợp thành công → bạn có thể để backend trả { success: true }
+    return { success: true, ...response.data.result };
+  } catch (err) {
+    return { success: false, error: err.message || "Không thể đăng ký." };
   }
-
-  return response.data.result;
 };
