@@ -1,0 +1,29 @@
+<odoo>
+    <!-- Tree view Pending Users -->
+    <record id="view_user_pending_tree" model="ir.ui.view">
+        <field name="name">res.users.pending.tree</field>
+        <field name="model">res.users</field>
+        <field name="arch" type="xml">
+            <tree string="Pending Users">
+                <field name="name"/>
+                <field name="login"/>
+                <field name="email"/>
+                <field name="email_verified"/>
+                <field name="active"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_user_pending" model="ir.actions.act_window">
+        <field name="name">Pending Users</field>
+        <field name="res_model">res.users</field>
+        <field name="view_mode">tree,form</field>
+        <field name="domain">[('active','=',False)]</field>
+        <field name="view_id" ref="view_user_pending_tree"/>
+    </record>
+
+    <!-- Menu -->
+    <menuitem id="menu_user_signup_root" name="User Signup Activation" parent="base.menu_administration" sequence="10"/>
+    <menuitem id="menu_user_pending" name="Pending Users" parent="menu_user_signup_root" sequence="1" action="action_user_pending"/>
+</odoo>

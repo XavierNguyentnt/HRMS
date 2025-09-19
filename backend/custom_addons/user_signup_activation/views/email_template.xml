@@ -1,0 +1,13 @@
+<odoo>
+    <record id="email_template_user_activation" model="mail.template">
+        <field name="name">User Activation</field>
+        <field name="email_from">${(user.company_id.email or 'noreply@example.com')|safe}</field>
+        <field name="subject">Kích hoạt tài khoản của bạn</field>
+        <field name="model_id" ref="base.model_res_users"/>
+        <field name="body_html"><![CDATA[
+            <p>Xin chào ${object.name},</p>
+            <p>Bạn đã được mời tham gia hệ thống. Vui lòng nhấn vào link bên dưới để tạo mật khẩu và kích hoạt tài khoản:</p>
+            <p><a t-attf-href="{{ object.get_signup_url() }}">Kích hoạt tài khoản</a></p>
+        ]]></field>
+    </record>
+</odoo>

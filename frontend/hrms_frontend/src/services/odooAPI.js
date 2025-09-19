@@ -170,27 +170,6 @@ export const fetchEmployeeById = async (employeeId) => {
 };
 
 /**
- * Gửi yêu cầu đăng ký người dùng mới (Signup).
- */
-export const register = async (userData) => {
-  const params = {
-    db: ODOO_DB,
-    name: userData.name,
-    login: userData.email, // Odoo dùng `login` cho email
-    password: userData.password,
-  };
-  try {
-    const response = await axiosInstance.post(URL.AUTH_SIGNUP, {
-      jsonrpc: "2.0",
-      params,
-    });
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-/**
  * Gửi yêu cầu cập nhật thông tin nhân viên.
  * @param {number} employeeId - ID của nhân viên (hr.employee)
  * @param {object} updateData - Các trường dữ liệu cần cập nhật
@@ -624,28 +603,6 @@ export const archiveEmployee = async (employeeId) => {
   });
   if (response.data.error) throw new Error(response.data.error.data.message);
   return response.data.result; // Trả về true
-};
-
-/**
- * Gửi yêu cầu đăng ký tài khoản mới.
- * @param {object} signupData - Dữ liệu đăng ký { name, email, password }
- */
-export const registerUser = async (signupData) => {
-  const params = {
-    ...signupData,
-  };
-  // Giả sử URL.API_SIGNUP = '/api/signup'
-  const response = await axiosInstance.post(URL.API_SIGNUP, {
-    jsonrpc: "2.0",
-    params,
-  });
-
-  // Xử lý lỗi trả về từ controller
-  if (response.data.error) {
-    throw new Error(response.data.error.data.details || "Đã có lỗi xảy ra.");
-  }
-
-  return response.data.result;
 };
 
 // src/services/odooAPI.js
