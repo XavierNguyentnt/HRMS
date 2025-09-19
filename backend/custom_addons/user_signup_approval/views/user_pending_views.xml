@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Menu Admin -->
+    <menuitem id="menu_user_signup_root" name="User Signup Approval" parent="base.menu_administration" sequence="10"/>
+    <menuitem id="menu_user_pending" name="Pending Users" parent="menu_user_signup_root" sequence="1"/>
+
+    <!-- Tree view để liệt kê user pending -->
+    <record id="view_user_pending_tree" model="ir.ui.view">
+        <field name="name">res.users.pending.tree</field>
+        <field name="model">res.users</field>
+        <field name="arch" type="xml">
+            <tree string="Pending Users">
+                <field name="name"/>
+                <field name="login"/>
+                <field name="signup_state"/>
+                <button name="action_approve_user" type="object" string="Approve" class="btn-primary"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_user_pending" model="ir.actions.act_window">
+        <field name="name">Pending Users</field>
+        <field name="res_model">res.users</field>
+        <field name="view_mode">tree,form</field>
+        <field name="domain">[('signup_state','=','pending')]</field>
+        <field name="view_id" ref="view_user_pending_tree"/>
+    </record>
+
+    <!-- Menu liên kết action -->
+    <menuitem id="menu_user_pending_action" name="Pending Users" parent="menu_user_pending" action="action_user_pending"/>
+</odoo>

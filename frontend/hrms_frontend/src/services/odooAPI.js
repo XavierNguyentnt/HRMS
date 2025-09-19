@@ -647,3 +647,18 @@ export const registerUser = async (signupData) => {
 
   return response.data.result;
 };
+
+// src/services/odooAPI.js
+export const apiFetch = async (path, method = "GET", body) => {
+  const opts = {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+    },
+    credentials: "include",
+  };
+  if (body) opts.body = JSON.stringify(body);
+
+  const res = await fetch(path, opts);
+  return res.json();
+};

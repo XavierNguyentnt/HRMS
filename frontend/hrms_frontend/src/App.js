@@ -3,6 +3,7 @@ import React from "react";
 import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
 import PrivateRoute from "./components/Routes/PrivateRoute";
+import AdminRoute from "./components/Routes/AdminRoute";
 
 // Import các component
 import Header from "./components/Pages/Commons/Header";
@@ -12,6 +13,7 @@ import ProfilePage from "./components/Pages/User/ProfilePage";
 import DashboardPage from "./components/Pages/Dashboards/DashboardPage";
 import DepartmentsPage from "./components/Pages/Department/DepartmentsPage";
 import EmployeesPage from "./components/Pages/Employee/EmployeesPage";
+import PendingUsersPage from "./components/Pages/Admin/PendingUsersPage";
 
 // =================================================================
 // Component Layout chính: Render Header và nội dung các trang con
@@ -34,7 +36,6 @@ function App() {
   return (
     <div className="App">
       <Routes>
-        {/* CÁC ROUTE CÔNG KHAI (KHÔNG CÓ HEADER) */}
         <Route
           path="/login"
           element={user ? <Navigate to="/dashboard" /> : <LoginPage />}
@@ -44,14 +45,14 @@ function App() {
           element={user ? <Navigate to="/dashboard" /> : <RegisterPage />}
         />
 
-        {/* CÁC ROUTE ĐƯỢC BẢO VỆ (SỬ DỤNG MAINLAYOUT VÀ CÓ HEADER) */}
+        {/* Main layout cho các route bình thường */}
         <Route
           path="/"
           element={user ? <MainLayout /> : <Navigate to="/login" />}>
-          {/* Các route con này sẽ được render bên trong <Outlet /> của MainLayout */}
+          <Route index element={<Navigate to="dashboard" />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route
-            path="/departments"
+            path="departments"
             element={
               <PrivateRoute>
                 <DepartmentsPage />
@@ -59,7 +60,7 @@ function App() {
             }
           />
           <Route
-            path="/employees"
+            path="employees"
             element={
               <PrivateRoute>
                 <EmployeesPage />
@@ -68,16 +69,19 @@ function App() {
           />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="profile/:employeeId" element={<ProfilePage />} />
-
-          {/* Khi cần thêm trang mới có Header, chỉ cần thêm vào đây:
-            <Route path="projects" element={<ProjectsPage />} /> 
-          */}
-
-          {/* Route mặc định khi đã đăng nhập */}
-          <Route index element={<Navigate to="/dashboard" />} />
         </Route>
 
-        {/* Route bắt lỗi 404 hoặc điều hướng người lạ */}
+        {/* Admin routes */}
+        <Route
+          path="/admin/*"
+          element={
+            <AdminRoute>
+              <MainLayout />
+            </AdminRoute>
+          }>
+          <Route path="pending-users" element={<PendingUsersPage />} />
+        </Route>
+
         <Route
           path="*"
           element={<Navigate to={user ? "/dashboard" : "/login"} />}
