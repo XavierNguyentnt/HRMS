@@ -1,9 +1,13 @@
 import axiosInstance from "../util/axios_instance";
 import URL from "../util/url";
 
+axiosInstance.defaults.withCredentials = true;
+
 // Cấu hình tên database của bạn
 const ODOO_DB = process.env.REACT_APP_ODOO_DATABASE;
-
+/*==========================*/
+/*CÁC API QUẢN TRỊ NGƯỜI DÙNG*/
+/*===========================*/
 /**
  * Danh sách các trường cần lấy từ model hr.employee để hiển thị đầy đủ trên trang Profile.
  * Dựa trên XML view của Odoo.
@@ -618,4 +622,333 @@ export const apiFetch = async (path, method = "GET", body) => {
 
   const res = await fetch(path, opts);
   return res.json();
+};
+
+/*========================*/
+/*CÁC API QUẢN TRỊ CÔNG VIỆC*/
+/*========================*/
+
+// ============================
+// PROJECTS & TASKS
+// ============================
+/**
+ * HÀM MỚI: Lấy chi tiết (tên, màu sắc) của các thẻ (tags) từ một danh sách ID.
+ * Hàm này rất quan trọng để hiển thị các thẻ màu mè giống như Odoo.
+ * @param {number[]} tagIds - Mảng các ID của project.tags
+ * @returns {Promise<Array>} - Mảng các đối tượng tag, ví dụ: [{id: 1, name: 'Nội bộ', color: 9}]
+ */
+export const fetchTagsDetails = async (tagIds) => {
+  // Nếu không có tagIds thì trả về mảng rỗng để tránh gọi API không cần thiết
+  if (!tagIds || tagIds.length === 0) {
+    return [];
+  }
+  const params = {
+    model: "project.tags",
+    method: "search_read",
+    // Domain: tìm tất cả các tag có id nằm trong danh sách tagIds
+    args: [[["id", "in", tagIds]]],
+    kwargs: {
+      fields: ["id", "name", "color"],
+    },
+  };
+  try {
+    const response = await axiosInstance.post(URL.RPC_CALL, {
+      jsonrpc: "2.0",
+      params,
+    });
+    if (response.data.error) {
+      throw new Error(response.data.error.data.message);
+    }
+    return response.data.result || [];
+  } catch (error) {
+    console.error("Lỗi khi tải chi tiết tags:", error);
+    // Trả về mảng rỗng để không làm crash giao diện nếu có lỗi
+    return [];
+  }
+};
+
+export const fetchProjects = async () => {
+  const params = {
+    model: "project.project",
+    method: "search_read",
+    args: [[]],
+    kwargs: {
+      fields: ["id", "name", "user_id", "date_start"],
+      order: "date_start desc",
+    },
+  };
+  try {
+    const response = await axiosInstance.post(URL.RPC_CALL, {
+      jsonrpc: "2.0",
+      params,
+    });
+    if (response.data.error) throw new Error(response.data.error.data.message);
+    return response.data.result || [];
+  } catch (error) {
+    if (error.response?.data?.error)
+      throw new Error(error.response.data.error.data.message);
+    throw new Error(error.message || "Lỗi tải danh sách dự án");
+  }
+};
+
+/**
+ * Lấy thông tin chi tiết của một dự án bằng ID.
+ * @param {number} projectId - ID của project.project
+ * @returns {Promise<object>}
+ */
+export const fetchProjectById = async (projectId) => {
+  const params = {
+    model: "project.project",
+    method: "read", // Dùng 'read' hiệu quả hơn 'search_read' khi đã biết ID
+    args: [
+      [parseInt(projectId)], // 'read' yêu cầu mảng các ID
+      [
+        // Liệt kê các trường bạn cần cho trang chi tiết
+        "name",
+        "user_id",
+        "partner_id",
+        "date_start",
+        "date",
+      ],
+    ],
+    kwargs: {},
+  };
+  try {
+    const response = await axiosInstance.post(URL.RPC_CALL, {
+      jsonrpc: "2.0",
+      params,
+    });
+    if (response.data.error) throw new Error(response.data.error.data.message);
+    if (response.data.result && response.data.result.length > 0) {
+      return response.data.result[0];
+    }
+    throw new Error("Không tìm thấy dự án.");
+  } catch (error) {
+    console.error("Lỗi khi tải chi tiết dự án:", error);
+    throw error;
+  }
+};
+
+export const fetchProjectsWithDetail = async () => {
+  try {
+    const projectsParams = {
+      model: "project.project",
+      method: "search_read",
+      args: [[]],
+      kwargs: {
+        fields: [
+          "id",
+          "name",
+          "is_favorite",
+          "partner_id", // khách hàng / phòng ban
+          "company_id",
+          "date_start",
+          "date", // ngày kết thúc
+          "allocated_hours",
+          "effective_hours",
+          "remaining_hours",
+          "milestone_progress",
+          "next_milestone_id",
+          "user_id", // trưởng dự án
+          "tag_ids", // danh sách ID tag
+          "last_update_status",
+          "last_update_color",
+          "stage_id",
+        ],
+        order: "date_start desc",
+      },
+    };
+
+    // 1. Lấy tất cả dự án
+    const response = await axiosInstance.post(URL.RPC_CALL, {
+      jsonrpc: "2.0",
+      params: projectsParams,
+    });
+
+    if (response.data.error) throw new Error(response.data.error.data.message);
+
+    const projects = response.data.result || [];
+    if (projects.length === 0) return [];
+
+    // 2. Gom tất cả tagIds và fetch chi tiết tags
+    const allTagIds = [...new Set(projects.flatMap((p) => p.tag_ids || []))];
+    const tagsDetails = await fetchTagsDetails(allTagIds);
+
+    // 3. Tạo Map tra cứu nhanh
+    const tagsMap = new Map(tagsDetails.map((tag) => [tag.id, tag]));
+
+    // 4. Chuẩn hóa dữ liệu trả về cho FE
+    return projects.map((proj) => ({
+      id: proj.id,
+      display_name: proj.name || "Không tên",
+      user_id: proj.user_id || [0, "Chưa gán"],
+      partner_id: proj.partner_id || [0, "N/A"],
+      company_id: proj.company_id || [0, "N/A"],
+      planned_date: `${proj.date_start || ""} → ${proj.date || ""}`.replace(
+        /^ → | → $/g,
+        ""
+      ),
+      milestone_progress: proj.milestone_progress || 0,
+      allocated_hours: proj.allocated_hours || 0,
+      effective_hours: proj.effective_hours || 0,
+      remaining_hours: proj.remaining_hours || 0,
+      tags: (proj.tag_ids || [])
+        .map((id) => tagsMap.get(id))
+        .filter(Boolean)
+        .map((tag) => ({
+          id: tag.id,
+          name: tag.name || "Không tên",
+          color: tag.color ?? 0,
+        })),
+      status: {
+        name: proj.last_update_status || "N/A",
+        color: proj.last_update_color ?? 0,
+      },
+      stage_id: proj.stage_id || [0, "Chưa xác định"],
+    }));
+  } catch (error) {
+    console.error("fetchProjectsWithDetail error:", error);
+    throw new Error(error.message || "Lỗi tải danh sách dự án");
+  }
+};
+
+//TASKS
+export const fetchTasksByProject = async ({
+  projectId,
+  page = 1,
+  pageSize = 10,
+}) => {
+  const offset = (page - 1) * pageSize;
+
+  // 1. Gọi API để lấy tổng số task (search_count)
+  const countParams = {
+    model: "project.task",
+    method: "search_count",
+    args: [[["project_id", "=", projectId]]],
+    kwargs: {},
+  };
+  const countResponse = await axiosInstance.post(URL.RPC_CALL, {
+    jsonrpc: "2.0",
+    params: countParams,
+  });
+  if (countResponse.data.error)
+    throw new Error(countResponse.data.error.data.message);
+  const total = countResponse.data.result;
+
+  // 2. Gọi API để lấy danh sách task của trang hiện tại
+  const dataParams = {
+    model: "project.task",
+    method: "search_read",
+    args: [[["project_id", "=", projectId]]],
+    kwargs: {
+      fields: [
+        "id",
+        "name",
+        "user_ids",
+        "stage_id",
+        "date_deadline",
+        "priority",
+        "priority_level",
+        "sequence",
+      ],
+      order: "sequence, priority desc",
+      limit: pageSize,
+      offset: offset,
+    },
+  };
+  const dataResponse = await axiosInstance.post(URL.RPC_CALL, {
+    jsonrpc: "2.0",
+    params: dataParams,
+  });
+  if (dataResponse.data.error)
+    throw new Error(dataResponse.data.error.data.message);
+
+  // 3. Trả về cả danh sách task và tổng số
+  return {
+    tasks: dataResponse.data.result || [],
+    total: total,
+  };
+};
+
+export const fetchTaskById = async (taskId) => {
+  const params = {
+    model: "project.task",
+    method: "read",
+    args: [
+      [taskId],
+      [
+        "id",
+        "name",
+        "user_id",
+        "stage_id",
+        "description",
+        "date_deadline",
+        "priority",
+      ],
+    ],
+  };
+  try {
+    const response = await axiosInstance.post(URL.RPC_CALL, {
+      jsonrpc: "2.0",
+      params,
+    });
+    if (response.data.error) throw new Error(response.data.error.data.message);
+    return response.data.result?.[0] || null;
+  } catch (error) {
+    if (error.response?.data?.error)
+      throw new Error(error.response.data.error.data.message);
+    throw new Error(error.message || "Lỗi tải chi tiết task");
+  }
+};
+
+export const createTask = async (taskData) => {
+  const params = { model: "project.task", method: "create", args: [taskData] };
+  try {
+    const response = await axiosInstance.post(URL.RPC_CALL, {
+      jsonrpc: "2.0",
+      params,
+    });
+    if (response.data.error) throw new Error(response.data.error.data.message);
+    return response.data.result;
+  } catch (error) {
+    if (error.response?.data?.error)
+      throw new Error(error.response.data.error.data.message);
+    throw new Error(error.message || "Lỗi tạo task");
+  }
+};
+
+export const updateTask = async (taskId, data) => {
+  const params = {
+    model: "project.task",
+    method: "write",
+    args: [[taskId], data],
+  };
+  try {
+    const response = await axiosInstance.post(URL.RPC_CALL, {
+      jsonrpc: "2.0",
+      params,
+    });
+    if (response.data.error) throw new Error(response.data.error.data.message);
+    return response.data.result;
+  } catch (error) {
+    if (error.response?.data?.error)
+      throw new Error(error.response.data.error.data.message);
+    throw new Error(error.message || "Lỗi cập nhật task");
+  }
+};
+
+export const deleteTask = async (taskId) => {
+  const params = { model: "project.task", method: "unlink", args: [[taskId]] };
+  try {
+    const response = await axiosInstance.post(URL.RPC_CALL, {
+      jsonrpc: "2.0",
+      params,
+    });
+    if (response.data.error) throw new Error(response.data.error.data.message);
+    return response.data.result;
+  } catch (error) {
+    if (error.response?.data?.error)
+      throw new Error(error.response.data.error.data.message);
+    throw new Error(error.message || "Lỗi xóa task");
+  }
 };

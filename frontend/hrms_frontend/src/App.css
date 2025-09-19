@@ -1,3 +1,37 @@
+:root {
+  /* 1. Bảng màu chính (Primary Palette) */
+  --color-primary: #ffa600; /* Orange - Màu chính cho nút, link... */
+  --color-primary-dark: #e69500; /* Màu khi hover, active */
+  --color-primary-light: #ffb733; /* Màu sáng hơn để tạo điểm nhấn */
+  --color-primary-text: #ffffff; /* Màu chữ trên nền màu chính (vd: trên nút) */
+  --header-bg-color: #816838; /* Màu nền header */
+  --border-color: #ced4da; /* Màu viền chung */
+  --hover-bg-color: #f8f9fa; /* Màu nền khi hover */
+  --active-bg-color: #e9ecef; /* Màu nền khi active */
+  --disabled-bg-color: #e0e0e0; /* Màu nền khi disabled */
+  --disabled-text-color: #6c757d; /* Màu chữ khi disabled */
+  --link-color: #007bff; /* Màu link */
+  --link-hover-color: #0056b3; /* Màu link khi hover*/
+
+  /* 2. Bảng màu phụ (Accent/Secondary) */
+  --color-secondary: #495057; /* Màu xám đậm cho các yếu tố phụ */
+  --color-secondary-text: #ffffff; /* Màu chữ trên nền phụ */
+
+  /* 3. Màu theo ngữ cảnh (Semantic Colors) */
+  --color-success: #28a745; /* Thành công - Xanh lá */
+  --color-danger: #dc3545; /* Lỗi/Xóa - Đỏ */
+  --color-warning: #ffc107; /* Cảnh báo - Vàng */
+  --color-info: #17a2b8; /* Thông tin - Xanh dương */
+
+  /* 4. Bảng màu trung tính (Neutral/Grayscale) */
+  --color-text-body: #212121; /* Màu chữ chính của toàn trang */
+  --color-text-muted: #6c757d; /* Màu chữ phụ, mờ hơn */
+  --color-bg-body: #f8f9fa; /* Màu nền chính của trang */
+  --color-bg-light: #ffffff; /* Màu nền cho card, header, modal... */
+  --color-border: #dee2e6; /* Màu viền cho các component */
+  --row-hover-bg: #f1f3f5; /* Màu khi di chuột qua hàng trong bảng */
+}
+
 .App {
   text-align: center;
 }
@@ -37,15 +71,6 @@
   }
 }
 
-:root {
-  --primary-color: #ffa600;
-  --primary-hover-color: #ffa600;
-  --border-color: #e0e0e0;
-  --header-bg-color: #f5f5f5;
-  --row-hover-bg: #fafafa;
-  --text-color: #212121;
-}
-
 body {
   margin: 0;
   background-color: #f9f9f9;
@@ -59,4 +84,161 @@ body {
 
 .cursor-pointer {
   cursor: pointer;
+}
+
+/* Custom styles for Project components */
+
+/* Status bubble colors */
+.o_status_bubble {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+}
+.o_color_bubble_20 {
+  background-color: #55b761;
+} /* On Track */
+.o_color_bubble_22 {
+  background-color: #f2614b;
+} /* At Risk */
+.o_color_bubble_24 {
+  background-color: #337ab7;
+} /* Done */
+/* Thêm các màu khác nếu cần */
+
+/* Tag colors */
+/* Định nghĩa màu chữ chung cho các thẻ tùy chỉnh */
+.badge.text-bg-custom {
+  color: #ffffff !important; /* Chữ màu trắng */
+  font-weight: 500;
+}
+
+/* Ghi đè màu nền dựa trên màu của Odoo */
+.badge.text-bg-custom.o_tag_color_0 {
+  background-color: #6c757d !important;
+}
+.badge.text-bg-custom.o_tag_color_1 {
+  background-color: #f06050 !important;
+}
+.badge.text-bg-custom.o_tag_color_2 {
+  background-color: #f4a460 !important;
+}
+.badge.text-bg-custom.o_tag_color_3 {
+  background-color: #f7cd1f !important;
+}
+.badge.text-bg-custom.o_tag_color_4 {
+  background-color: #875a7b !important;
+}
+.badge.text-bg-custom.o_tag_color_5 {
+  background-color: #55b761 !important;
+}
+.badge.text-bg-custom.o_tag_color_6 {
+  background-color: #337ab7 !important;
+}
+.badge.text-bg-custom.o_tag_color_7 {
+  background-color: #29ab87 !important;
+}
+.badge.text-bg-custom.o_tag_color_8 {
+  background-color: #4c6a8a !important;
+}
+.badge.text-bg-custom.o_tag_color_9 {
+  background-color: #f06e6b !important;
+}
+.badge.text-bg-custom.o_tag_color_10 {
+  background-color: #a76489 !important;
+}
+.badge.text-bg-custom.o_tag_color_11 {
+  background-color: #c97983 !important;
+}
+
+/*Project table*/
+.project-table {
+  table-layout: fixed;
+  width: 100%;
+  border-collapse: separate; /* cần cho border-radius */
+  border-spacing: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 8px; /* bo góc */
+  overflow: hidden; /* đảm bảo bo góc áp dụng cho header và body */
+}
+
+/* Header row */
+.project-table thead.table-header th {
+  background-color: var(--header-bg-color) !important;
+  color: var(--color-primary-text) !important; /* chữ trắng */
+  text-align: center;
+  font-weight: 600;
+}
+
+/* Records tbody: căn trái */
+.project-table tbody td {
+  text-align: left;
+  vertical-align: middle;
+  padding: 8px 12px;
+}
+
+/* Hover effect cho rows */
+.project-table tbody tr:hover {
+  background-color: var(--row-hover-bg);
+}
+
+/* Định nghĩa chiều rộng tối thiểu cho từng cột */
+.project-table .col-name {
+  min-width: 250px;
+}
+.project-table .col-customer {
+  min-width: 180px;
+}
+.project-table .col-company {
+  min-width: 180px;
+}
+.project-table .col-date {
+  min-width: 200px;
+}
+.project-table .col-progress {
+  min-width: 150px;
+}
+.project-table .col-manager {
+  min-width: 150px;
+}
+.project-table .col-tags {
+  min-width: 200px;
+}
+.project-table .col-status {
+  min-width: 120px;
+}
+.project-table .col-hours {
+  min-width: 130px;
+}
+.project-table .col-action {
+  min-width: 120px;
+  text-align: center;
+}
+
+/* Custom Progress Bar */
+.custom-progress {
+  height: 0.8rem; /* tăng chiều cao */
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background-color: #e9ecef; /* nền xám nhạt */
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2); /* đổ bóng trong */
+}
+
+.custom-progress .progress-bar {
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2rem; /* canh chữ giữa thanh */
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25); /* đổ bóng cho phần tiến độ */
+}
+
+/* Status indicator label */
+.status-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--color-text-body);
+}
+
+.status-dot {
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
 }

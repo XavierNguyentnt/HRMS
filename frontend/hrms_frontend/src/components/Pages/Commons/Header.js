@@ -1,10 +1,10 @@
+// src/components/Pages/Commons/Header.js
 import React from "react";
 import { Navbar, Nav, Container, NavDropdown, Image } from "react-bootstrap";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
 import "./Header.css";
 
-// Component Header chung cho toàn bộ ứng dụng
 function Header() {
   const { user, handleLogout } = useAuth();
   const navigate = useNavigate();
@@ -15,20 +15,19 @@ function Header() {
   };
 
   return (
-    <Navbar variant="light  " expand="lg" sticky="top" className="header-bg">
-      <Container>
-        {/* Logo hoặc tên ứng dụng */}
+    <Navbar variant="light" expand="lg" sticky="top" className="header-bg">
+      <Container fluid>
         <Image
-          src="../../../../../../logo/logo-duan.png"
+          src="/logo/logo-duan.png" // Giả sử logo nằm trong thư mục public
           as={Link}
           to="/"
-          style={{ height: "9vh", marginRight: "30px" }}></Image>
+          style={{ height: "80px", marginRight: "20px" }}
+        />
         <Navbar.Brand as={Link} to="/" className="fw-bold">
-          Quản lý Dự án
+          QUẢN LÝ DỰ ÁN
         </Navbar.Brand>
         <Navbar.Toggle aria-controls="main-navbar-nav" />
         <Navbar.Collapse id="main-navbar-nav">
-          {/* Các link điều hướng chính (hiển thị khi đã đăng nhập) */}
           <Nav className="me-auto">
             {user && (
               <>
@@ -41,18 +40,19 @@ function Header() {
                 <Nav.Link as={Link} to="/employees">
                   Nhân Viên
                 </Nav.Link>
+
+                {/* === THAY ĐỔI Ở ĐÂY === */}
+                {/* Bỏ Dropdown và thay bằng một Nav.Link trực tiếp */}
                 <Nav.Link as={Link} to="/projects">
-                  Các dự án
+                  Dự án
                 </Nav.Link>
-                {/* Thêm các link khác tại đây */}
               </>
             )}
           </Nav>
 
-          {/* Các link và thông tin người dùng ở bên phải */}
+          {/* User menu (giữ nguyên) */}
           <Nav>
             {user ? (
-              // Nếu đã đăng nhập, hiển thị dropdown menu của user
               <NavDropdown
                 title={
                   <>
@@ -84,15 +84,9 @@ function Header() {
                 </NavDropdown.Item>
               </NavDropdown>
             ) : (
-              // Nếu chưa đăng nhập, hiển thị link Login và Register
-              <>
-                <Nav.Link as={Link} to="/login">
-                  Đăng nhập
-                </Nav.Link>
-                <Nav.Link as={Link} to="/register">
-                  Đăng ký
-                </Nav.Link>
-              </>
+              <Nav.Link as={Link} to="/login">
+                Đăng nhập
+              </Nav.Link>
             )}
           </Nav>
         </Navbar.Collapse>
