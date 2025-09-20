@@ -1,12 +1,13 @@
 // src/components/Pages/project_components/ColumnFilter.js
 import React from "react";
+import { FaSlidersH } from "react-icons/fa";
 import { Dropdown, Form } from "react-bootstrap";
 
 const ColumnFilter = ({ columns, visibleColumns, onColumnToggle }) => {
   return (
     <Dropdown>
       <Dropdown.Toggle variant="outline-secondary" id="dropdown-column-filter">
-        <i className="fa fa-cog"></i>
+        <FaSlidersH />
       </Dropdown.Toggle>
 
       <Dropdown.Menu>

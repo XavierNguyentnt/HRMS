@@ -32,58 +32,15 @@
   --row-hover-bg: #f1f3f5; /* Màu khi di chuột qua hàng trong bảng */
 }
 
-.App {
-  text-align: center;
-}
-
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
-}
-
-.App-link {
-  color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 body {
-  margin: 0;
-  background-color: #f9f9f9;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-    Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  font-family: "Quicksand", serif !important;
+  font-weight: 500 !important;
 }
 
-.App-main-content {
-  padding: 20px;
-}
-
-.cursor-pointer {
-  cursor: pointer;
+h1 {
+  font-family: "Quicksand", serif !important;
+  font-weight: bolder !important;
+  font-size: 2.2rem !important;
 }
 
 /* Custom styles for Project components */
@@ -110,7 +67,10 @@ body {
 /* Định nghĩa màu chữ chung cho các thẻ tùy chỉnh */
 .badge.text-bg-custom {
   color: #ffffff !important; /* Chữ màu trắng */
-  font-weight: 500;
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25); /* Đổ bóng làm nổi bật tag */
+  border-radius: 8px; /* bo tròn nhẹ để tag nhìn mềm hơn */
 }
 
 /* Ghi đè màu nền dựa trên màu của Odoo */
@@ -241,4 +201,53 @@ body {
 
 .status-dot {
   box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+}
+
+.stage-badge {
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25); /* Đổ bóng làm nổi bật stage */
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stage-color-0 {
+  background-color: #6c757d;
+}
+.stage-color-1 {
+  background-color: #337ab7;
+}
+.stage-color-2 {
+  background-color: #f4a460;
+}
+.stage-color-3 {
+  background-color: #55b761;
+}
+.stage-color-4 {
+  background-color: #875a7b;
+}
+.stage-color-5 {
+  background-color: #f06050;
+}
+.stage-color-6 {
+  background-color: #f7cd1f;
+}
+.stage-color-7 {
+  background-color: #29ab87;
+}
+.stage-color-8 {
+  background-color: #4c6a8a;
+}
+.stage-color-9 {
+  background-color: #f06e6b;
+}
+.stage-color-10 {
+  background-color: #a76489;
+}
+.stage-color-11 {
+  background-color: #c97983;
 }

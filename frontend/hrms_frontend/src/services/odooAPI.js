@@ -94,6 +94,22 @@ export const login = async (login, password) => {
   }
 };
 
+/*Lấy thông tin người dùng hiện tại (res.users) */
+export const fetchUsers = async () => {
+  const params = {
+    model: "res.users",
+    method: "search_read",
+    args: [[["share", "=", false]]], // chỉ lấy user nội bộ, loại bỏ portal
+    kwargs: { fields: ["id", "name", "login"], order: "name asc" },
+  };
+  const response = await axiosInstance.post(URL.RPC_CALL, {
+    jsonrpc: "2.0",
+    params,
+  });
+  if (response.data.error) throw new Error(response.data.error.data.message);
+  return response.data.result;
+};
+
 /**
  * Lấy thông tin chi tiết của nhân viên (employee profile) từ user_id.
  * @param {number} userId - ID của user (res.users)
@@ -629,7 +645,7 @@ export const apiFetch = async (path, method = "GET", body) => {
 /*========================*/
 
 // ============================
-// PROJECTS & TASKS
+// PROJECTS
 // ============================
 /**
  * HÀM MỚI: Lấy chi tiết (tên, màu sắc) của các thẻ (tags) từ một danh sách ID.
@@ -637,6 +653,24 @@ export const apiFetch = async (path, method = "GET", body) => {
  * @param {number[]} tagIds - Mảng các ID của project.tags
  * @returns {Promise<Array>} - Mảng các đối tượng tag, ví dụ: [{id: 1, name: 'Nội bộ', color: 9}]
  */
+
+//FETCH TAGS
+
+export const fetchAllTags = async () => {
+  const params = {
+    model: "project.tags",
+    method: "search_read",
+    args: [[]],
+    kwargs: { fields: ["id", "name", "color"], order: "name asc" },
+  };
+  const response = await axiosInstance.post(URL.RPC_CALL, {
+    jsonrpc: "2.0",
+    params,
+  });
+  if (response.data.error) throw new Error(response.data.error.data.message);
+  return response.data.result || [];
+};
+
 export const fetchTagsDetails = async (tagIds) => {
   // Nếu không có tagIds thì trả về mảng rỗng để tránh gọi API không cần thiết
   if (!tagIds || tagIds.length === 0) {
@@ -666,6 +700,23 @@ export const fetchTagsDetails = async (tagIds) => {
     return [];
   }
 };
+
+export const createTag = async (tagData) => {
+  const params = {
+    model: "project.tags",
+    method: "create",
+    args: [tagData], // {name: "Tên thẻ", color: 5}
+    kwargs: {},
+  };
+  const response = await axiosInstance.post(URL.RPC_CALL, {
+    jsonrpc: "2.0",
+    params,
+  });
+  if (response.data.error) throw new Error(response.data.error.data.message);
+  return response.data.result; // id tag mới
+};
+
+//FETCH PROJECTS
 
 export const fetchProjects = async () => {
   const params = {
@@ -734,7 +785,7 @@ export const fetchProjectsWithDetail = async () => {
     const projectsParams = {
       model: "project.project",
       method: "search_read",
-      args: [[]],
+      args: [[["user_id", "!=", 1]]],
       kwargs: {
         fields: [
           "id",
@@ -812,7 +863,107 @@ export const fetchProjectsWithDetail = async () => {
   }
 };
 
-//TASKS
+//FETCH STAGES
+
+export async function fetchAllProjectStages() {
+  const params = {
+    model: "project.project.stage", // đúng model stage của Project
+    method: "search_read",
+    args: [[]],
+    kwargs: {
+      fields: ["id", "name", "sequence"], // bỏ "color"
+      order: "sequence ASC",
+    },
+  };
+  const response = await axiosInstance.post(URL.RPC_CALL, {
+    jsonrpc: "2.0",
+    params,
+  });
+  if (response.data.error) throw new Error(response.data.error.data.message);
+  return response.data.result || [];
+}
+
+export const fetchStagesDetails = async (stageIds) => {
+  if (!stageIds || stageIds.length === 0) return [];
+  const params = {
+    model: "project.project.stage",
+    method: "search_read",
+    args: [[["id", "in", stageIds]]],
+    kwargs: { fields: ["id", "name", "color"] },
+  };
+  const response = await axiosInstance.post(URL.RPC_CALL, {
+    jsonrpc: "2.0",
+    params,
+  });
+  return response.data.result || [];
+};
+
+export const createProject = async (projectData) => {
+  const params = {
+    model: "project.project",
+    method: "create",
+    args: [projectData],
+    kwargs: {}, // luôn có kwargs
+  };
+  try {
+    const response = await axiosInstance.post(URL.RPC_CALL, {
+      jsonrpc: "2.0",
+      params,
+    });
+    if (response.data.error) throw new Error(response.data.error.data.message);
+    return response.data.result; // trả về ID của project mới
+  } catch (error) {
+    if (error.response?.data?.error)
+      throw new Error(error.response.data.error.data.message);
+    throw new Error(error.message || "Lỗi tạo dự án");
+  }
+};
+
+/* CHỈNH SỬA THÔNG TIN DỰ ÁN */
+
+export const updateProject = async (projectId, data) => {
+  const params = {
+    model: "project.project",
+    method: "write",
+    args: [[projectId], data],
+    kwargs: {},
+  };
+  try {
+    const response = await axiosInstance.post(URL.RPC_CALL, {
+      jsonrpc: "2.0",
+      params,
+    });
+    if (response.data.error) throw new Error(response.data.error.data.message);
+    return response.data.result; // true nếu thành công
+  } catch (error) {
+    throw new Error(error.message || "Lỗi cập nhật dự án");
+  }
+};
+
+// Xóa dự án theo ID
+export const deleteProject = async (projectId) => {
+  const params = {
+    model: "project.project",
+    method: "unlink",
+    args: [[projectId]], // unlink yêu cầu mảng ID
+    kwargs: {},
+  };
+  try {
+    const response = await axiosInstance.post(URL.RPC_CALL, {
+      jsonrpc: "2.0",
+      params,
+    });
+    if (response.data.error) throw new Error(response.data.error.data.message);
+    return response.data.result; // Odoo trả về true nếu xóa thành công
+  } catch (error) {
+    console.error("Lỗi khi xóa dự án:", error);
+    throw error;
+  }
+};
+
+// ============================
+// TASKS
+// ============================
 export const fetchTasksByProject = async ({
   projectId,
   page = 1,
@@ -839,7 +990,12 @@ export const fetchTasksByProject = async ({
   const dataParams = {
     model: "project.task",
     method: "search_read",
-    args: [[["project_id", "=", projectId]]],
+    args: [
+      [
+        ["project_id", "=", projectId],
+        ["user_ids", "not in", [1]],
+      ],
+    ],
     kwargs: {
       fields: [
         "id",
@@ -902,7 +1058,12 @@ export const fetchTaskById = async (taskId) => {
 };
 
 export const createTask = async (taskData) => {
-  const params = { model: "project.task", method: "create", args: [taskData] };
+  const params = {
+    model: "project.task",
+    method: "create",
+    args: [taskData],
+    kwargs: {},
+  };
   try {
     const response = await axiosInstance.post(URL.RPC_CALL, {
       jsonrpc: "2.0",

@@ -58,7 +58,7 @@ function DepartmentsPage() {
 
   return (
     <Container fluid className="p-4">
-      <h2 className="mb-4">Phòng Ban</h2>
+      <h1 className="mb-4">Phòng Ban</h1>
       <Row>
         {departments.map((dept) => (
           <Col md={4} lg={3} key={dept.id} className="mb-4">
@@ -74,12 +74,12 @@ function DepartmentsPage() {
                   <h4 className="fw-bold">{dept.name}</h4>
                   {dept.manager_id && (
                     <p className="text-muted mb-2">
-                      Trưởng phòng: {dept.manager_id[1]}
+                      Người phụ trách: {dept.manager_id[1]}
                     </p>
                   )}
                   {dept.company_id && (
                     <p className="text-muted small">
-                      Công ty: {dept.company_id[1]}
+                      Đơn vị: {dept.company_id[1]}
                     </p>
                   )}
                 </div>

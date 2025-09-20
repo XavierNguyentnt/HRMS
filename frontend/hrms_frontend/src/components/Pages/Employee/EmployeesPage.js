@@ -157,9 +157,9 @@ function EmployeesPage() {
 
   return (
     <Container fluid className="p-4">
-      <h2 className="mb-4">
+      <h1 className="mb-4">
         {deptName ? `Nhân viên: ${deptName}` : "Danh sách Nhân viên"}
-      </h2>
+      </h1>
       <Row className="mb-4">
         <Col md={6}>
           <Form.Control
