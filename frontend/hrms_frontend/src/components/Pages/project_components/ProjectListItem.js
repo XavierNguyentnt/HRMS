@@ -22,14 +22,19 @@ const ProjectListItem = ({
     setIsEditing(false);
   };
 
-  // ... object 'cells' giữ nguyên ...
   const cells = {
     display_name: (
-      <td key="display_name">
+      <td
+        key="display_name"
+        // Thêm sự kiện onClick và style con trỏ chuột
+        onClick={() => onViewTasks(project.id)}
+        style={{ cursor: "pointer" }}
+        title="Nhấp để xem chi tiết dự án">
         {isEditing ? (
           <Form.Control
             size="sm"
             value={editData.display_name}
+            onClick={(e) => e.stopPropagation()} // Ngăn sự kiện click lan ra thẻ <td>
             onChange={(e) =>
               setEditData({ ...editData, display_name: e.target.value })
             }
@@ -102,7 +107,6 @@ const ProjectListItem = ({
       {orderedVisibleColumns.map((col) => cells[col.key])}
       <td className="col-action">
         <ButtonGroup size="sm">
-          {/* === THAY ĐỔI Ở ĐÂY === */}
           <Button variant="info" onClick={() => onViewTasks(project.id)}>
             <i className="fa fa-tasks"></i> Chi tiết
           </Button>

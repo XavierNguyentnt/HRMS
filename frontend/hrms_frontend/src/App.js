@@ -17,6 +17,7 @@ import PendingUsersPage from "./components/Pages/Admin/PendingUsersPage";
 // Project Pages
 import ProjectDashboard from "./components/Pages/Projects/ProjectDashboard";
 import ProjectDetailPage from "./components/Pages/Projects/ProjectDetailPage";
+import TasksPage from "./components/Pages/Tasks/TasksPage";
 
 // =================================================================
 // Component Layout chính: Render Header và nội dung các trang con
@@ -74,13 +75,10 @@ function App() {
           <Route path="profile/:employeeId" element={<ProfilePage />} />
 
           {/* 1. Route cho trang DANH SÁCH DỰ ÁN */}
-          {/* Khi người dùng vào '/projects', component ProjectDashboard sẽ được render */}
           <Route path="projects" element={<ProjectDashboard />} />
-
           {/* 2. Route cho trang CHI TIẾT DỰ ÁN (đây là route động) */}
-          {/* Khi người dùng vào '/projects/1', '/projects/2'... component ProjectDetailPage sẽ được render */}
-          {/* `projectId` sẽ được dùng làm tham số trong component con */}
           <Route path="projects/:projectId" element={<ProjectDetailPage />} />
+          <Route path="tasks" element={<TasksPage />} />
         </Route>
 
         {/* Admin routes */}

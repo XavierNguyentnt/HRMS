@@ -1078,6 +1078,61 @@ export const createTask = async (taskData) => {
   }
 };
 
+/**
+ * Fetch task theo domain tùy chỉnh, hỗ trợ phân trang
+ */
+export const fetchTasksByDomain = async ({
+  domain = [],
+  page = 1,
+  pageSize = 10,
+}) => {
+  const offset = (page - 1) * pageSize;
+
+  const countParams = {
+    model: "project.task",
+    method: "search_count",
+    args: [domain],
+    kwargs: {},
+  };
+  const countResponse = await axiosInstance.post(URL.RPC_CALL, {
+    jsonrpc: "2.0",
+    params: countParams,
+  });
+  if (countResponse.data.error)
+    throw new Error(countResponse.data.error.data.message);
+  const total = countResponse.data.result;
+
+  const dataParams = {
+    model: "project.task",
+    method: "search_read",
+    args: [domain],
+    kwargs: {
+      fields: [
+        "id",
+        "name",
+        "user_ids",
+        "stage_id",
+        "date_deadline",
+        "project_id",
+      ],
+      order: "date_deadline desc, priority desc",
+      limit: pageSize,
+      offset: offset,
+    },
+  };
+  const dataResponse = await axiosInstance.post(URL.RPC_CALL, {
+    jsonrpc: "2.0",
+    params: dataParams,
+  });
+  if (dataResponse.data.error)
+    throw new Error(dataResponse.data.error.data.message);
+
+  return {
+    tasks: dataResponse.data.result || [],
+    total: total,
+  };
+};
+
 export const updateTask = async (taskId, data) => {
   const params = {
     model: "project.task",

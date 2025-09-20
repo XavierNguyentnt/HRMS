@@ -34,18 +34,27 @@ function Header() {
                 <Nav.Link as={Link} to="/dashboard">
                   Bảng điều khiển
                 </Nav.Link>
+
                 <Nav.Link as={Link} to="/departments">
                   Phòng Ban
                 </Nav.Link>
+
                 <Nav.Link as={Link} to="/employees">
                   Nhân Viên
                 </Nav.Link>
 
-                {/* === THAY ĐỔI Ở ĐÂY === */}
-                {/* Bỏ Dropdown và thay bằng một Nav.Link trực tiếp */}
-                <Nav.Link as={Link} to="/projects">
-                  Dự án
-                </Nav.Link>
+                <NavDropdown title="Dự án & Nhiệm vụ" id="project-nav-dropdown">
+                  <NavDropdown.Item as={Link} to="/projects">
+                    Dashboard Dự án
+                  </NavDropdown.Item>
+                  <NavDropdown.Divider />
+                  <NavDropdown.Item as={Link} to="/tasks?filter=my">
+                    Nhiệm vụ của tôi
+                  </NavDropdown.Item>
+                  <NavDropdown.Item as={Link} to="/tasks?filter=all">
+                    Tất cả nhiệm vụ
+                  </NavDropdown.Item>
+                </NavDropdown>
               </>
             )}
           </Nav>
