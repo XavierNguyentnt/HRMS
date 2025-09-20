@@ -1138,6 +1138,7 @@ export const updateTask = async (taskId, data) => {
     model: "project.task",
     method: "write",
     args: [[taskId], data],
+    kwargs: {},
   };
   try {
     const response = await axiosInstance.post(URL.RPC_CALL, {
@@ -1154,7 +1155,12 @@ export const updateTask = async (taskId, data) => {
 };
 
 export const deleteTask = async (taskId) => {
-  const params = { model: "project.task", method: "unlink", args: [[taskId]] };
+  const params = {
+    model: "project.task",
+    method: "unlink",
+    args: [[taskId]],
+    kwargs: {},
+  };
   try {
     const response = await axiosInstance.post(URL.RPC_CALL, {
       jsonrpc: "2.0",
