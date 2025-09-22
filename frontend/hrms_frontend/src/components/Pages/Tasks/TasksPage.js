@@ -11,7 +11,7 @@ import {
   Col,
 } from "react-bootstrap";
 import { fetchTasksByDomain } from "../../../services/odooAPI"; // Sẽ tạo hàm này
-import TaskModal from "../project_components/TaskModal"; // Tái sử dụng TaskModal
+import TaskModal from "../task_components/TaskModal"; // Tái sử dụng TaskModal
 import { useAuth } from "../../../contexts/AuthContext";
 
 function TasksPage() {

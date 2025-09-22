@@ -780,37 +780,40 @@ export const fetchProjectById = async (projectId) => {
   }
 };
 
-export const fetchProjectsWithDetail = async () => {
+// NÂNG CẤP: Chấp nhận domain và order để tìm kiếm, lọc, sắp xếp
+export const fetchProjectsWithDetail = async ({
+  domain = [],
+  order = "date_start desc",
+}) => {
   try {
     const projectsParams = {
       model: "project.project",
       method: "search_read",
-      args: [[["user_id", "!=", 1]]],
+      args: [[["user_id", "!=", 1], ...domain]], // Kết hợp domain mặc định và domain từ tham số
       kwargs: {
         fields: [
           "id",
           "name",
           "is_favorite",
-          "partner_id", // khách hàng / phòng ban
+          "partner_id",
           "company_id",
           "date_start",
-          "date", // ngày kết thúc
+          "date",
           "allocated_hours",
           "effective_hours",
           "remaining_hours",
           "milestone_progress",
           "next_milestone_id",
-          "user_id", // trưởng dự án
-          "tag_ids", // danh sách ID tag
+          "user_id",
+          "tag_ids",
           "last_update_status",
           "last_update_color",
           "stage_id",
         ],
-        order: "date_start desc",
+        order: order, // Sử dụng tham số order
       },
     };
 
-    // 1. Lấy tất cả dự án
     const response = await axiosInstance.post(URL.RPC_CALL, {
       jsonrpc: "2.0",
       params: projectsParams,
@@ -821,14 +824,10 @@ export const fetchProjectsWithDetail = async () => {
     const projects = response.data.result || [];
     if (projects.length === 0) return [];
 
-    // 2. Gom tất cả tagIds và fetch chi tiết tags
     const allTagIds = [...new Set(projects.flatMap((p) => p.tag_ids || []))];
     const tagsDetails = await fetchTagsDetails(allTagIds);
-
-    // 3. Tạo Map tra cứu nhanh
     const tagsMap = new Map(tagsDetails.map((tag) => [tag.id, tag]));
 
-    // 4. Chuẩn hóa dữ liệu trả về cho FE
     return projects.map((proj) => ({
       id: proj.id,
       display_name: proj.name || "Không tên",
@@ -964,18 +963,43 @@ export const deleteProject = async (projectId) => {
 // ============================
 // TASKS
 // ============================
+// HÀM MỚI: Lấy tất cả các giai đoạn của task cho một dự án cụ thể (dùng cho Kanban)
+export const fetchTaskStagesForProject = async (projectIds) => {
+  const params = {
+    model: "project.task.type", // Model của stage task
+    method: "search_read",
+    args: [[["project_ids", "in", projectIds]]],
+    kwargs: {
+      fields: ["id", "name", "sequence"],
+      order: "sequence asc",
+    },
+  };
+  try {
+    const response = await axiosInstance.post(URL.RPC_CALL, {
+      jsonrpc: "2.0",
+      params,
+    });
+    if (response.data.error) throw new Error(response.data.error.data.message);
+    return response.data.result || [];
+  } catch (error) {
+    throw new Error(error.message || "Lỗi tải các giai đoạn của task");
+  }
+};
 export const fetchTasksByProject = async ({
   projectId,
   page = 1,
   pageSize = 10,
+  domain = [], // Thêm domain để lọc
+  order = "sequence, priority desc", // Thêm order để sắp xếp
 }) => {
   const offset = (page - 1) * pageSize;
+  const fullDomain = [["project_id", "=", projectId], ...domain]; // Kết hợp domain mặc định và domain truyền vào
 
-  // 1. Gọi API để lấy tổng số task (search_count)
+  // 1. Lấy tổng số task với domain đã lọc
   const countParams = {
     model: "project.task",
     method: "search_count",
-    args: [[["project_id", "=", projectId]]],
+    args: [fullDomain],
     kwargs: {},
   };
   const countResponse = await axiosInstance.post(URL.RPC_CALL, {
@@ -986,16 +1010,11 @@ export const fetchTasksByProject = async ({
     throw new Error(countResponse.data.error.data.message);
   const total = countResponse.data.result;
 
-  // 2. Gọi API để lấy danh sách task của trang hiện tại
+  // 2. Lấy danh sách task của trang hiện tại với domain và order
   const dataParams = {
     model: "project.task",
     method: "search_read",
-    args: [
-      [
-        ["project_id", "=", projectId],
-        ["user_ids", "not in", [1]],
-      ],
-    ],
+    args: [fullDomain],
     kwargs: {
       fields: [
         "id",
@@ -1006,8 +1025,14 @@ export const fetchTasksByProject = async ({
         "priority",
         "priority_level",
         "sequence",
+        "partner_id",
+        "progress", // Thêm các trường cần thiết
+        "milestone_id",
+        "effective_hours",
+        "total_hours_spent",
+        "remaining_hours",
       ],
-      order: "sequence, priority desc",
+      order: order, // Sử dụng order từ tham số
       limit: pageSize,
       offset: offset,
     },
