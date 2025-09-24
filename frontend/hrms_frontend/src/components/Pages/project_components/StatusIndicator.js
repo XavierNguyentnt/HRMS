@@ -1,46 +1,60 @@
 // src/components/Pages/project_components/StatusIndicator.js
 import React from "react";
-import {
-  FaCheckCircle,
-  FaTimesCircle,
-  FaExclamationCircle,
-  FaClock,
-  FaPlayCircle,
-} from "react-icons/fa";
+import { FaPlayCircle, FaCheckCircle } from "react-icons/fa";
 
-// Map icon theo code chung, không gắn chặt màu
-// const stageIconMap = {
-//   todo: <FaClock />,
-//   approving: <FaExclamationCircle />,
-//   in_progress: <FaPlayCircle />,
-//   done: <FaCheckCircle />,
-//   cancelled: <FaTimesCircle />,
-// };
+/**
+ * Hàm hash đơn giản để chuyển một chuỗi thành một số nguyên.
+ * Giúp đảm bảo một tên giai đoạn luôn có cùng một màu.
+ * @param {string} str - Chuỗi đầu vào (tên giai đoạn)
+ * @returns {number} - Một số hash
+ */
+const simpleHash = (str) => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash |= 0; // Chuyển thành số nguyên 32-bit
+  }
+  return hash;
+};
+
+/**
+ * Hàm tiện ích để làm sạch tên giai đoạn, chỉ dùng cho mục đích hiển thị.
+ */
+const cleanStageName = (name) => {
+  if (typeof name !== "string" || !name) return "";
+  return name.replace(/^[\d\s._-]+/, "");
+};
 
 const StatusIndicator = ({ stage }) => {
-  if (!stage) {
+  // `stage` object có thể có dạng { id, name, color, fold } (cho Dự án)
+  // hoặc { id, name, fold } (cho Nhiệm vụ)
+  if (!stage || !stage.name) {
     return <span>Không xác định</span>;
   }
 
-  // stage = { id, name, color }
-  const colorIndex = stage.id ? stage.id % 12 : 0;
+  // 1. LOGIC XÁC ĐỊNH MÀU SẮC LINH HOẠT
+  let colorIndex;
+  if (stage.color !== undefined && stage.color !== false) {
+    // ƯU TIÊN 1: Dùng `color` từ Odoo nếu có (dành cho Giai đoạn Dự án)
+    colorIndex = stage.color;
+  } else {
+    // ƯU TIÊN 2: Tự tính toán màu từ tên (dành cho Giai đoạn Nhiệm vụ)
+    // Đảm bảo "Đang tiến hành" luôn có 1 màu, "Hoàn thành" luôn có 1 màu khác.
+    colorIndex = Math.abs(simpleHash(stage.name) % 12);
+  }
   const colorClass = `stage-color-${colorIndex}`;
 
-  // Icon (tuỳ chọn) – bạn có thể map theo id hoặc code nếu cần
-  const stageIconMap = {
-    1: <FaClock />, // Chuẩn bị
-    2: <FaExclamationCircle />, // Chờ phê duyệt
-    3: <FaPlayCircle />, // Đang triển khai
-    4: <FaCheckCircle />, // Hoàn tất
-    5: <FaTimesCircle />, // Đã hủy
-  };
-  const icon = stageIconMap[stage.id] || null;
+  // 2. TÊN HIỂN THỊ: Luôn được làm sạch.
+  const displayName = cleanStageName(stage.name);
+
+  // 3. ICON: Logic ổn định dựa trên trạng thái kỹ thuật `stage.fold`.
+  const icon = stage.fold ? <FaCheckCircle /> : <FaPlayCircle />;
 
   return (
-    <span
-      className={`stage-badge ${colorClass} d-inline-flex align-items-center gap-1`}>
-      {icon && React.cloneElement(icon, { className: "me-1" })}
-      {stage.name}
+    <span className={`stage-badge ${colorClass}`}>
+      {icon}
+      <span>{displayName}</span>
     </span>
   );
 };

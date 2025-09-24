@@ -112,7 +112,7 @@ h1 {
 }
 
 /*Project table*/
-.project-table {
+.unified-table {
   table-layout: fixed;
   width: 100%;
   border-collapse: separate; /* cần cho border-radius */
@@ -123,56 +123,68 @@ h1 {
 }
 
 /* Header row */
-.project-table thead.table-header th {
+.unified-table thead.table-header th {
   background-color: var(--header-bg-color) !important;
   color: var(--color-primary-text) !important; /* chữ trắng */
+  justify-items: center;
   text-align: center;
   font-weight: 600;
 }
 
 /* Records tbody: căn trái */
-.project-table tbody td {
+.unified-table tbody td {
   text-align: left;
   vertical-align: middle;
   padding: 8px 12px;
 }
 
 /* Hover effect cho rows */
-.project-table tbody tr:hover {
+.unified-table tbody tr:hover {
   background-color: var(--row-hover-bg);
 }
 
 /* Định nghĩa chiều rộng tối thiểu cho từng cột */
-.project-table .col-name {
+.unified-table .col-name {
   min-width: 250px;
 }
-.project-table .col-customer {
+.unified-table .col-customer {
   min-width: 180px;
 }
-.project-table .col-company {
+.unified-table .col-company {
   min-width: 180px;
 }
-.project-table .col-date {
+.unified-table .col-date {
   min-width: 200px;
 }
-.project-table .col-progress {
+.unified-table .col-progress {
   min-width: 150px;
 }
-.project-table .col-manager {
+.unified-table .col-manager {
   min-width: 150px;
 }
-.project-table .col-tags {
+.unified-table .col-tags {
   min-width: 200px;
 }
-.project-table .col-status {
+.unified-table .col-status {
   min-width: 120px;
 }
-.project-table .col-hours {
+.unified-table .col-hours {
   min-width: 130px;
 }
-.project-table .col-action {
+.unified-table .col-action {
   min-width: 120px;
   text-align: center;
+}
+
+/* Project task tables*/
+.project-task-table .table-group-header {
+  cursor: pointer;
+  background-color: #f8f9fa;
+  font-weight: bold;
+}
+
+.project-task-table .table-group-header:hover {
+  background-color: #e9ecef;
 }
 
 /* Custom Progress Bar */
@@ -277,15 +289,4 @@ h1 {
 }
 .kanban-card:hover {
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
-}
-
-/* Project task tables*/
-.project-task-table .table-group-header {
-  cursor: pointer;
-  background-color: #f8f9fa;
-  font-weight: bold;
-}
-
-.project-task-table .table-group-header:hover {
-  background-color: #e9ecef;
 }

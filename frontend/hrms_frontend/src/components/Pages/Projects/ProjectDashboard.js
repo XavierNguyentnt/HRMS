@@ -24,11 +24,17 @@ import {
 import ProjectListItem from "../project_components/ProjectListItem";
 import ProjectModal from "../project_components/ProjectModal";
 import ColumnFilter from "../project_components/ColumnFilter";
-// THÊM MỚI: Import component Kanban
 import ProjectKanbanView from "../project_components/ProjectKanbanView";
-import { FaSearch, FaList, FaTh } from "react-icons/fa";
+import {
+  FaSearch,
+  FaList,
+  FaTh,
+  FaAngleDown, // THÊM MỚI
+  FaAngleRight, // THÊM MỚI
+} from "react-icons/fa";
 
 const ALL_COLUMNS = [
+  // ... giữ nguyên
   { key: "display_name", label: "Tên", sortable: true },
   { key: "partner_id", label: "Khách hàng", sortable: false },
   { key: "company_id", label: "Công ty", sortable: false },
@@ -52,6 +58,10 @@ function ProjectDashboard() {
   const [showModal, setShowModal] = useState(false);
   const navigate = useNavigate();
 
+  // THÊM MỚI: State để quản lý nhóm và trạng thái thu gọn
+  const [groupedProjects, setGroupedProjects] = useState({});
+  const [collapsedStages, setCollapsedStages] = useState({});
+
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState({ stage_id: "", user_id: "" });
   const [sortConfig, setSortConfig] = useState({
@@ -61,11 +71,9 @@ function ProjectDashboard() {
   const [viewMode, setViewMode] = useState(
     localStorage.getItem("projectDashboardViewMode") || "list"
   );
-
   const [visibleColumns, setVisibleColumns] = useState(
     JSON.parse(localStorage.getItem("visibleColumns")) || [
       "display_name",
-      "partner_id",
       "milestone_progress",
       "user_id",
       "tags",
@@ -128,6 +136,19 @@ function ProjectDashboard() {
     loadProjects();
   }, [loadProjects]);
 
+  // THÊM MỚI: useEffect để nhóm các project theo stage
+  useEffect(() => {
+    if (projects.length > 0 && stages.length > 0) {
+      const groups = stages.reduce((acc, stage) => {
+        acc[stage.id] = projects.filter(
+          (p) => p.stage_id && p.stage_id[0] === stage.id
+        );
+        return acc;
+      }, {});
+      setGroupedProjects(groups);
+    }
+  }, [projects, stages]);
+
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
     setFilters((prev) => ({ ...prev, [name]: value }));
@@ -147,6 +168,11 @@ function ProjectDashboard() {
         ? prev.filter((key) => key !== columnKey)
         : [...prev, columnKey]
     );
+  };
+
+  // THÊM MỚI: Hàm để thu gọn/mở rộng nhóm
+  const toggleStageCollapse = (stageId) => {
+    setCollapsedStages((prev) => ({ ...prev, [stageId]: !prev[stageId] }));
   };
 
   const handleViewTasks = (projectId) => {
@@ -192,7 +218,6 @@ function ProjectDashboard() {
     }
   };
 
-  // THÊM MỚI: Hàm xử lý khi kéo-thả project trên Kanban
   const handleProjectStageChange = async (projectId, newStageId) => {
     // Cập nhật state gốc để đảm bảo dữ liệu nhất quán
     setProjects((prevProjects) =>
@@ -232,7 +257,7 @@ function ProjectDashboard() {
 
   return (
     <Container fluid className="py-4">
-      {/* ... Phần header, tìm kiếm, lọc ... giữ nguyên ... */}
+      {/* ... Phần header, controls ... giữ nguyên ... */}
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h1>Dashboard Quản lý hợp phần</h1>
         <div className="d-flex gap-2">
@@ -311,14 +336,12 @@ function ProjectDashboard() {
         <>
           {viewMode === "list" ? (
             <div className="table-responsive">
-              <table className="table table-bordered table-hover table-striped project-table">
-                {/* ... table thead, tbody ... giữ nguyên ... */}
+              <table className="table table-bordered table-hover table-striped unified-table">
                 <thead className="table-header">
                   <tr>
                     {orderedVisibleColumns.map((col) => (
                       <th
                         key={col.key}
-                        className={`col-${col.key.replace("_", "-")}`}
                         onClick={() => col.sortable && handleSort(col.key)}
                         style={{
                           cursor: col.sortable ? "pointer" : "default",
@@ -334,33 +357,44 @@ function ProjectDashboard() {
                     <th className="col-action">Hành động</th>
                   </tr>
                 </thead>
-                <tbody className="table-body">
-                  {projects.length > 0 ? (
-                    projects.map((project) => (
-                      <ProjectListItem
-                        key={project.id}
-                        project={project}
-                        orderedVisibleColumns={orderedVisibleColumns}
-                        stages={stages}
-                        onViewTasks={handleViewTasks}
-                        onEditProject={handleInlineEditProject}
-                        onDeleteProject={handleDeleteProject}
-                      />
-                    ))
-                  ) : (
-                    <tr>
-                      <td
-                        colSpan={orderedVisibleColumns.length + 1}
-                        className="text-center">
-                        Không có dự án nào phù hợp
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
+                {/* THAY ĐỔI: Render bảng theo nhóm */}
+                {stages.map(
+                  (stage) =>
+                    groupedProjects[stage.id]?.length > 0 && (
+                      <tbody key={stage.id} className="table-group">
+                        <tr
+                          className="table-group-header"
+                          onClick={() => toggleStageCollapse(stage.id)}>
+                          <th colSpan={orderedVisibleColumns.length + 1}>
+                            {collapsedStages[stage.id] ? (
+                              <FaAngleRight />
+                            ) : (
+                              <FaAngleDown />
+                            )}
+                            <span className="ms-2">{stage.name}</span>
+                            <span className="badge bg-secondary rounded-pill ms-2">
+                              {groupedProjects[stage.id].length}
+                            </span>
+                          </th>
+                        </tr>
+                        {!collapsedStages[stage.id] &&
+                          groupedProjects[stage.id].map((project) => (
+                            <ProjectListItem
+                              key={project.id}
+                              project={project}
+                              orderedVisibleColumns={orderedVisibleColumns}
+                              stages={stages}
+                              onViewTasks={handleViewTasks}
+                              onEditProject={handleInlineEditProject}
+                              onDeleteProject={handleDeleteProject}
+                            />
+                          ))}
+                      </tbody>
+                    )
+                )}
               </table>
             </div>
           ) : (
-            // THAY THẾ: Sử dụng component ProjectKanbanView
             <ProjectKanbanView
               projects={projects}
               stages={stages}

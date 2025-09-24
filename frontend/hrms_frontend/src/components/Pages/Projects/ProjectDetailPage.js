@@ -18,7 +18,9 @@ import {
   fetchProjectById,
   deleteTask,
   fetchTaskStagesForProject,
+  fetchTagsDetails,
 } from "../../../services/odooAPI";
+import { cleanStageName } from "../../../util/formatters";
 import TaskModal from "../task_components/TaskModal";
 import KanbanView from "../task_components/TaskKanbanView";
 import ColumnFilter from "../project_components/ColumnFilter"; // Tái sử dụng ColumnFilter
@@ -37,17 +39,41 @@ const ALL_TASK_COLUMNS = [
   { key: "name", label: "Tiêu đề", sortable: true },
   { key: "milestone_id", label: "Mốc thời gian", sortable: true },
   { key: "partner_id", label: "Khách hàng", sortable: true },
-  { key: "user_ids", label: "Người được phân công", sortable: false }, // Sorting Many2many is complex
-  { key: "date_deadline", label: "Thời hạn", sortable: true },
+  { key: "parent_id", label: "Nhiệm vụ cha", sortable: true },
+  { key: "user_ids", label: "Người được phân công", sortable: false },
+  { key: "allocated_hours", label: "Thời gian phân bổ", sortable: true },
+  { key: "effective_hours", label: "Thời gian đã dùng", sortable: true },
+  {
+    key: "subtask_effective_hours",
+    label: "TG dùng cho NV phụ",
+    sortable: true,
+  },
+  { key: "total_hours_spent", label: "Tổng TG đã dùng", sortable: true },
+  { key: "remaining_hours", label: "Thời gian còn lại", sortable: true },
   { key: "progress", label: "Tiến độ", sortable: true },
+  { key: "date_deadline", label: "Thời hạn", sortable: true },
+  {
+    key: "my_activity_date_deadline",
+    label: "Thời hạn của tôi",
+    sortable: true,
+  },
+  { key: "rating_last_text", label: "Đánh giá", sortable: true },
+  { key: "tag_ids", label: "Thẻ", sortable: false },
+  {
+    key: "date_last_stage_update",
+    label: "Cập nhật giai đoạn",
+    sortable: true,
+  },
+  { key: "stage_id", label: "Giai đoạn", sortable: true },
+  { key: "personal_stage_type_id", label: "Giai đoạn cá nhân", sortable: true },
 ];
-
 function ProjectDetailPage() {
   const { projectId } = useParams();
   const [project, setProject] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [groupedTasks, setGroupedTasks] = useState({});
   const [taskStages, setTaskStages] = useState([]);
+  const [tagsMap, setTagsMap] = useState(new Map());
   const [totalTasks, setTotalTasks] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -103,9 +129,19 @@ function ProjectDetailPage() {
             order,
           }
         );
+
         setTasks(taskData);
         setTotalTasks(totalData);
         setCurrentPage(page);
+        if (taskData.length > 0) {
+          const allTagIds = [
+            ...new Set(taskData.flatMap((t) => t.tag_ids || [])),
+          ];
+          if (allTagIds.length > 0) {
+            const tagsDetails = await fetchTagsDetails(allTagIds);
+            setTagsMap(new Map(tagsDetails.map((tag) => [tag.id, tag])));
+          }
+        }
       } catch (err) {
         setError("Không thể tải danh sách nhiệm vụ. Vui lòng thử lại.");
         console.error("Failed to load tasks", err);
@@ -276,8 +312,8 @@ function ProjectDetailPage() {
         <>
           {viewMode === "list" ? (
             <div className="table-responsive">
-              <table className="table table-hover project-task-table">
-                <thead>
+              <table className="table table-bordered table-hover table-striped unified-table project-task-table">
+                <thead className="table-header">
                   <tr>
                     {orderedVisibleColumns.map((col) => (
                       <th
@@ -310,7 +346,10 @@ function ProjectDetailPage() {
                             ) : (
                               <FaAngleDown />
                             )}
-                            <span className="ms-2">{stage.name}</span>
+                            {/* ÁP DỤNG HÀM Ở ĐÂY */}
+                            <span className="ms-2">
+                              {cleanStageName(stage.name)}
+                            </span>
                             <span className="badge bg-secondary rounded-pill ms-2">
                               {groupedTasks[stage.id].length}
                             </span>
@@ -322,6 +361,7 @@ function ProjectDetailPage() {
                               key={task.id}
                               task={task}
                               visibleColumns={orderedVisibleColumns}
+                              tagsMap={tagsMap} // <--- THÊM PROP NÀY
                               onEdit={handleOpenEditModal}
                               onDelete={handleDeleteTask}
                             />
@@ -343,7 +383,24 @@ function ProjectDetailPage() {
 
       {viewMode === "list" && totalPages > 1 && (
         <div className="d-flex justify-content-center mt-4">
-          <Pagination>{/* ... Pagination Items ... */}</Pagination>
+          <Pagination>
+            <Pagination.Prev
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+            />
+            {[...Array(totalPages).keys()].map((number) => (
+              <Pagination.Item
+                key={number + 1}
+                active={number + 1 === currentPage}
+                onClick={() => handlePageChange(number + 1)}>
+                {number + 1}
+              </Pagination.Item>
+            ))}
+            <Pagination.Next
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+            />
+          </Pagination>
         </div>
       )}
 

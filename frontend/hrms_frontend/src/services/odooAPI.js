@@ -970,7 +970,7 @@ export const fetchTaskStagesForProject = async (projectIds) => {
     method: "search_read",
     args: [[["project_ids", "in", projectIds]]],
     kwargs: {
-      fields: ["id", "name", "sequence"],
+      fields: ["id", "name", "sequence", "fold"],
       order: "sequence asc",
     },
   };
@@ -1016,23 +1016,33 @@ export const fetchTasksByProject = async ({
     method: "search_read",
     args: [fullDomain],
     kwargs: {
+      // THAY ĐỔI: Mở rộng danh sách các trường ở đây
       fields: [
         "id",
         "name",
+        "milestone_id",
+        "partner_id",
+        "parent_id", // Nhiệm vụ cha
         "user_ids",
-        "stage_id",
+        "allocated_hours",
+        "effective_hours",
+        "subtask_effective_hours",
+        "total_hours_spent",
+        "remaining_hours",
+        "progress",
         "date_deadline",
+        "activity_ids", // Hoạt động tiếp theo
+        "my_activity_date_deadline", // Thời hạn của tôi
+        "rating_last_text", // Đánh giá
+        "tag_ids", // Thẻ
+        "date_last_stage_update", // Cập nhật giai đoạn lần cuối
+        "stage_id", // Giai đoạn
+        "personal_stage_type_id", // Giai đoạn cá nhân
         "priority",
         "priority_level",
         "sequence",
-        "partner_id",
-        "progress", // Thêm các trường cần thiết
-        "milestone_id",
-        "effective_hours",
-        "total_hours_spent",
-        "remaining_hours",
       ],
-      order: order, // Sử dụng order từ tham số
+      order: order,
       limit: pageSize,
       offset: offset,
     },
