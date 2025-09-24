@@ -2,43 +2,38 @@
 import React from "react";
 import { Button, ButtonGroup } from "react-bootstrap";
 import ProgressBar from "../project_components/ProgressBar";
+import ProjectTags from "../project_components/ProjectTags";
+import StatusIndicator from "../project_components/StatusIndicator";
 
-const formatDate = (dateString) => {
-  if (!dateString) return "-";
-  try {
-    const date = new Date(dateString);
-    // Lấy ngày, tháng, năm
-    const day = String(date.getDate()).padStart(2, "0");
-    const month = String(date.getMonth() + 1).padStart(2, "0"); // Tháng bắt đầu từ 0
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
-  } catch (error) {
-    return dateString; // Trả về chuỗi gốc nếu có lỗi
-  }
-};
-
-const TaskListItem = ({ task, visibleColumns, onEdit, onDelete }) => {
+const TaskListItem = ({ task, visibleColumns, tagsMap, onEdit, onDelete }) => {
   const renderCell = (colKey) => {
     switch (colKey) {
-      case "id":
-        return task.id;
+      // Các case đã có...
       case "name":
         return <strong>{task.name}</strong>;
-      case "milestone_id":
-        return task.milestone_id ? task.milestone_id[1] : "-";
-      case "partner_id":
-        return task.partner_id ? task.partner_id[1] : "-";
-      case "user_ids":
-        return task.user_ids?.length > 0
-          ? task.user_ids.map((u) => u[1]).join(", ")
-          : "-";
-      case "date_deadline":
-        return formatDate(task.date_deadline);
       case "progress":
         return <ProgressBar value={task.progress || 0} />;
-      // Thêm các trường khác nếu cần
+      case "tag_ids":
+        const tags = (task.tag_ids || [])
+          .map((id) => tagsMap.get(id))
+          .filter(Boolean);
+        return <ProjectTags tags={tags} />;
+
+      // THÊM CÁC CASE CÒN THIẾU
+      case "stage_id":
+        return (
+          <StatusIndicator stage={task.stage_id} isFolded={task.is_closed} />
+        );
+
+      case "personal_stage_type_id":
+        return <StatusIndicator stage={task.personal_stage_type_id} />;
+
       default:
-        return task[colKey] || "-";
+        const fieldValue = task[colKey];
+        if (Array.isArray(fieldValue) && fieldValue.length > 0) {
+          return fieldValue[1] || "-";
+        }
+        return fieldValue || "-";
     }
   };
 
@@ -47,7 +42,7 @@ const TaskListItem = ({ task, visibleColumns, onEdit, onDelete }) => {
       {visibleColumns.map((col) => (
         <td key={col.key}>{renderCell(col.key)}</td>
       ))}
-      <td>
+      <td className="col-action">
         <ButtonGroup size="sm">
           <Button variant="warning" onClick={() => onEdit(task)}>
             Sửa

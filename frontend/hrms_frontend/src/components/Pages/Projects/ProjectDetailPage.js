@@ -255,8 +255,8 @@ function ProjectDetailPage() {
   return (
     <Container fluid className="py-4">
       <Breadcrumb>
-        <Breadcrumb.Item as={Link} to="/projects">
-          Dự án
+        <Breadcrumb.Item>
+          <Link to="/projects">Dự án</Link>
         </Breadcrumb.Item>
         <Breadcrumb.Item active>{project.name}</Breadcrumb.Item>
       </Breadcrumb>
