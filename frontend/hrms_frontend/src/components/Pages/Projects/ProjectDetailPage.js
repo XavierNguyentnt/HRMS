@@ -1,6 +1,6 @@
 // src/components/Pages/Projects/ProjectDetailPage.js
 import React, { useEffect, useState, useCallback } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   Button,
   Container,
@@ -17,9 +17,11 @@ import {
   fetchTasksByProject,
   fetchProjectById,
   deleteTask,
+  updateTask,
   fetchTaskStagesForProject,
   fetchTagsDetails,
-} from "../../../services/odooAPI";
+} from "../../../services/api";
+import { useAuth, ROLES } from "../../../contexts/AuthContext";
 import { cleanStageName } from "../../../util/formatters";
 import TaskModal from "../task_components/TaskModal";
 import KanbanView from "../task_components/TaskKanbanView";
@@ -68,6 +70,7 @@ const ALL_TASK_COLUMNS = [
   { key: "personal_stage_type_id", label: "Giai đoạn cá nhân", sortable: true },
 ];
 function ProjectDetailPage() {
+  const { user, role } = useAuth();
   const { projectId } = useParams();
   const [project, setProject] = useState(null);
   const [tasks, setTasks] = useState([]);
@@ -83,6 +86,10 @@ function ProjectDetailPage() {
   const [viewMode, setViewMode] = useState(
     localStorage.getItem(`projectViewMode_${projectId}`) || "list"
   );
+  const navigate = useNavigate();
+  const handleNavigateToTaskDetail = (taskId) => {
+    navigate(`/projects/${projectId}/tasks/${taskId}`);
+  };
   const [collapsedStages, setCollapsedStages] = useState({});
 
   // BƯỚC 2: THÊM CÁC STATE CHO VIỆC LỌC, SẮP XẾP, ẨN/HIỆN CỘT
@@ -210,6 +217,28 @@ function ProjectDetailPage() {
     setSelectedTask(null);
     setShowModal(true);
   };
+  const handleInlineEditTask = async (editedTaskData) => {
+    try {
+      // Chỉ gửi những trường có thể thay đổi để tối ưu
+      const dataToUpdate = {
+        name: editedTaskData.name,
+        // Thêm các trường khác nếu bạn cho phép sửa inline
+      };
+
+      await updateTask(editedTaskData.id, dataToUpdate);
+
+      // Cập nhật lại state `tasks` để giao diện thay đổi ngay lập tức
+      setTasks((currentTasks) =>
+        currentTasks.map((task) =>
+          task.id === editedTaskData.id ? editedTaskData : task
+        )
+      );
+    } catch (err) {
+      alert("Cập nhật nhiệm vụ thất bại: " + err.message);
+      // Có thể tải lại dữ liệu để đảm bảo đồng bộ nếu lỗi
+      reloadData();
+    }
+  };
   const handleOpenEditModal = (task) => {
     setSelectedTask(task);
     setShowModal(true);
@@ -255,8 +284,8 @@ function ProjectDetailPage() {
   return (
     <Container fluid className="py-4">
       <Breadcrumb>
-        <Breadcrumb.Item>
-          <Link to="/projects">Dự án</Link>
+        <Breadcrumb.Item linkAs={Link} linkProps={{ to: "/projects" }}>
+          Dự án
         </Breadcrumb.Item>
         <Breadcrumb.Item active>{project.name}</Breadcrumb.Item>
       </Breadcrumb>
@@ -356,16 +385,25 @@ function ProjectDetailPage() {
                           </th>
                         </tr>
                         {!collapsedStages[stage.id] &&
-                          groupedTasks[stage.id].map((task) => (
-                            <TaskListItem
-                              key={task.id}
-                              task={task}
-                              visibleColumns={orderedVisibleColumns}
-                              tagsMap={tagsMap} // <--- THÊM PROP NÀY
-                              onEdit={handleOpenEditModal}
-                              onDelete={handleDeleteTask}
-                            />
-                          ))}
+                          groupedTasks[stage.id].map((task) => {
+                            // TÍNH TOÁN QUYỀN TRÊN MỖI TASK
+                            const canEditAll =
+                              role === ROLES.ADMIN ||
+                              user?.uid === task.create_uid?.[0];
+
+                            return (
+                              <TaskListItem
+                                key={task.id}
+                                task={task}
+                                canEditAll={canEditAll}
+                                visibleColumns={orderedVisibleColumns}
+                                tagsMap={tagsMap}
+                                onNavigate={handleNavigateToTaskDetail}
+                                onDelete={handleDeleteTask}
+                                onInlineEdit={handleInlineEditTask}
+                              />
+                            );
+                          })}
                       </tbody>
                     )
                 )}

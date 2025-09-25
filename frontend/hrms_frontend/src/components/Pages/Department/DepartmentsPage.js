@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Container, Row, Col, Card, Spinner, Button } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-import * as odooApi from "../../../services/odooAPI";
+import * as odooApi from "../../../services/api";
 import { FaUsers } from "react-icons/fa";
 
 // Một mảng màu để hiển thị cho các thẻ Kanban, tương ứng với color index của Odoo

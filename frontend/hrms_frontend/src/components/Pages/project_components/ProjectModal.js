@@ -4,7 +4,7 @@ import {
   fetchUsers,
   fetchAllTags, // Tối ưu: Dùng hàm fetchAllTags
   fetchProjectById, // Tối ưu: Dùng hàm này để lấy chi tiết
-} from "../../../services/odooAPI";
+} from "../../../services/api";
 
 // Sửa lại prop, thay vì projectId thì truyền thẳng project object
 const ProjectModal = ({ show, onHide, onSave, project }) => {

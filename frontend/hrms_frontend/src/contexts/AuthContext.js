@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 // SỬA LỖI 1: Import từ đúng file và đúng đường dẫn
 import { loginUser, registerUser } from "../api/authAPI";
-import * as odooApi from "../services/odooAPI";
+import * as odooApi from "../services/api";
 
 export const ROLES = {
   ADMIN: "admin",
@@ -70,7 +70,7 @@ export function AuthProvider({ children }) {
       const sessionInfo = await loginUser(identifier, password);
 
       const profile = await odooApi.fetchUserProfile(sessionInfo.uid);
-      const userSession = { ...sessionInfo, ...profile };
+      const userSession = { ...profile, ...sessionInfo };
 
       setUser(userSession);
       setRole(getUserRole(userSession.job_title));
@@ -116,7 +116,7 @@ export function AuthProvider({ children }) {
     setIsUpdateLoading(true);
     setUpdateError(null);
     setUpdateSuccess(false);
-
+    // user.id ở đây là ID của hr.employee
     if (!user || !user.id) {
       setUpdateError("Không tìm thấy ID nhân viên để cập nhật.");
       setIsUpdateLoading(false);
@@ -124,7 +124,10 @@ export function AuthProvider({ children }) {
     }
 
     try {
+      // Gọi API cập nhật hr.employee bằng user.id
       await odooApi.updateProfile(user.id, updateData);
+
+      // Lấy lại thông tin employee mới nhất bằng user.uid (ID của res.users)
       const freshProfile = await odooApi.fetchUserProfile(user.uid);
       const updatedSession = { ...user, ...freshProfile };
 

@@ -10,7 +10,7 @@ import {
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 
-import { updateTask } from "../../../services/odooAPI";
+import { updateTask } from "../../../services/api";
 import KanbanColumn from "./TaskKanbanColumn"; // Ta sẽ tạo component này ngay sau đây
 
 const KanbanView = ({ tasks, stages, onTaskUpdate }) => {

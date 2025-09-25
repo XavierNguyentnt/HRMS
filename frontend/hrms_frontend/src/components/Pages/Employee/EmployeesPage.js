@@ -11,7 +11,7 @@ import {
   Alert, // MỚI: Thêm Alert để báo lỗi
 } from "react-bootstrap";
 import { useSearchParams, Link } from "react-router-dom"; // MỚI: Thêm Link
-import * as odooApi from "../../../services/odooAPI";
+import * as odooApi from "../../../services/api";
 
 const PAGE_SIZE = 20; // Mỗi lần tải 20 nhân viên
 

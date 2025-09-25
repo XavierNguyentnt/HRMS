@@ -8,6 +8,7 @@ import ProgressBar from "./ProgressBar";
 const ProjectListItem = ({
   project,
   stages,
+  canEditAll,
   onViewTasks,
   onEditProject,
   onDeleteProject,
@@ -25,7 +26,7 @@ const ProjectListItem = ({
   const renderCellContent = (colKey) => {
     switch (colKey) {
       case "display_name":
-        return isEditing ? (
+        return isEditing && canEditAll ? (
           <Form.Control
             size="sm"
             value={editData.display_name}

@@ -18,6 +18,7 @@ import PendingUsersPage from "./components/Pages/Admin/PendingUsersPage";
 import ProjectDashboard from "./components/Pages/Projects/ProjectDashboard";
 import ProjectDetailPage from "./components/Pages/Projects/ProjectDetailPage";
 import TasksPage from "./components/Pages/Tasks/TasksPage";
+import TaskDetailPage from "./components/Pages/Tasks/TaskDetailPage";
 
 // =================================================================
 // Component Layout chính: Render Header và nội dung các trang con
@@ -78,6 +79,10 @@ function App() {
           <Route path="projects" element={<ProjectDashboard />} />
           {/* 2. Route cho trang CHI TIẾT DỰ ÁN (đây là route động) */}
           <Route path="projects/:projectId" element={<ProjectDetailPage />} />
+          <Route
+            path="/projects/:projectId/tasks/:taskId"
+            element={<TaskDetailPage />}
+          />
           <Route path="tasks" element={<TasksPage />} />
         </Route>
 

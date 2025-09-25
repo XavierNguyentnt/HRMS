@@ -20,7 +20,8 @@ import {
   updateProject,
   deleteProject,
   fetchUsers,
-} from "../../../services/odooAPI";
+} from "../../../services/api";
+import { useAuth, ROLES } from "../../../contexts/AuthContext";
 import ProjectListItem from "../project_components/ProjectListItem";
 import ProjectModal from "../project_components/ProjectModal";
 import ColumnFilter from "../project_components/ColumnFilter";
@@ -52,6 +53,7 @@ function ProjectDashboard() {
   const [projects, setProjects] = useState([]);
   const [stages, setStages] = useState([]);
   const [users, setUsers] = useState([]);
+  const { user, role } = useAuth();
   const [editProject, setEditProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -243,6 +245,9 @@ function ProjectDashboard() {
     }
   };
 
+  // Define canEditAll based on user role (adjust logic as needed)
+  const canEditAll = role === ROLES.ADMIN || role === ROLES.MANAGER;
+
   if (error) {
     return (
       <Container className="py-4">
@@ -382,6 +387,7 @@ function ProjectDashboard() {
                             <ProjectListItem
                               key={project.id}
                               project={project}
+                              canEditAll={canEditAll} // <-- TRUYỀN QUYỀN XUỐNG
                               orderedVisibleColumns={orderedVisibleColumns}
                               stages={stages}
                               onViewTasks={handleViewTasks}

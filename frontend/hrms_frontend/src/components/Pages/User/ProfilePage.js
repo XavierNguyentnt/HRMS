@@ -16,7 +16,7 @@ import {
   Modal,
 } from "react-bootstrap";
 import { useAuth, ROLES } from "../../../contexts/AuthContext";
-import * as odooApi from "../../../services/odooAPI";
+import * as odooApi from "../../../services/api";
 import { FaTrash, FaPlusCircle } from "react-icons/fa";
 
 function ProfilePage() {

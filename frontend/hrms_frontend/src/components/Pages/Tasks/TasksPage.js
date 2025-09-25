@@ -10,7 +10,7 @@ import {
   Row,
   Col,
 } from "react-bootstrap";
-import { fetchTasksByDomain } from "../../../services/odooAPI"; // Sẽ tạo hàm này
+import { fetchTasksByDomain } from "../../../services/api"; // Sẽ tạo hàm này
 import TaskModal from "../task_components/TaskModal"; // Tái sử dụng TaskModal
 import { useAuth } from "../../../contexts/AuthContext";
 
