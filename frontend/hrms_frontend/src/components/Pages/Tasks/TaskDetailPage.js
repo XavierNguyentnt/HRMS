@@ -86,11 +86,13 @@ const TaskDetailPage = () => {
   return (
     <Container fluid className="py-4">
       <Breadcrumb>
-        <Breadcrumb.Item>
-          <Link to="/projects">Dự án</Link>
+        <Breadcrumb.Item linkAs={Link} linkProps={{ to: "/projects" }}>
+          Dự án
         </Breadcrumb.Item>
-        <Breadcrumb.Item>
-          <Link to={`/projects/${projectId}`}>{task.project_id[1]}</Link>
+        <Breadcrumb.Item
+          linkAs={Link}
+          linkProps={{ to: `/projects/${projectId}` }}>
+          {task.project_id[1]}
         </Breadcrumb.Item>
         <Breadcrumb.Item active>{task.name}</Breadcrumb.Item>
       </Breadcrumb>
@@ -188,7 +190,12 @@ const TaskDetailPage = () => {
           )}
         </Col>
         <Col md={4}>
-          <Chatter task={task} onUpdate={loadTaskData} />
+          <Chatter
+            resModel="project.task"
+            resId={task.id}
+            initialFollowerIds={task.message_follower_ids}
+            onUpdate={loadTaskData}
+          />
         </Col>
       </Row>
     </Container>

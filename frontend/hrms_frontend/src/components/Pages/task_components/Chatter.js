@@ -8,37 +8,52 @@ import {
   FormControl,
 } from "react-bootstrap";
 import { FaSearch, FaPaperclip } from "react-icons/fa";
-import { fetchMessages, createAttachment } from "../../../services/api";
+// THÊM IMPORT MỚI
+import {
+  fetchMessages,
+  createAttachment,
+  fetchAllMessageIds,
+} from "../../../services/api";
 import ChatMessage from "./ChatMessage";
 import Followers from "./Followers";
 import FollowButton from "./FollowButton";
 
-const Chatter = ({ task, onUpdate }) => {
+// THAY ĐỔI PROPS: Nhận resModel và resId thay vì cả object `task`
+const Chatter = ({ resModel, resId, initialFollowerIds, onUpdate }) => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const fileInputRef = useRef(null);
 
+  // NÂNG CẤP LOGIC TẢI TIN NHẮN
   useEffect(() => {
-    const loadMessages = async () => {
-      if (!task?.message_ids || task.message_ids.length === 0) {
-        setMessages([]);
+    const loadChatterData = async () => {
+      if (!resModel || !resId) {
         setLoading(false);
         return;
       }
       setLoading(true);
+      setError(null);
       try {
-        const messageData = await fetchMessages(task.message_ids);
-        setMessages(messageData);
+        const allMessageIds = await fetchAllMessageIds(resModel, resId);
+        if (allMessageIds.length > 0) {
+          const messageData = await fetchMessages(allMessageIds);
+          setMessages(messageData);
+        } else {
+          setMessages([]);
+        }
       } catch (err) {
-        setError("Không thể tải lịch sử trao đổi.");
+        // HIỂN THỊ LỖI GỐC TỪ API
+        setError(err.message || "Đã xảy ra lỗi không xác định.");
+        // GHI LẠI LỖI ĐẦY ĐỦ VÀO CONSOLE ĐỂ KIỂM TRA
+        console.error("Lỗi chi tiết khi tải Chatter:", err);
       } finally {
         setLoading(false);
       }
     };
-    loadMessages();
-  }, [task.message_ids]);
+    loadChatterData();
+  }, [resModel, resId]);
 
   const handleFileChange = async (event) => {
     const file = event.target.files[0];
@@ -52,8 +67,8 @@ const Chatter = ({ task, onUpdate }) => {
         await createAttachment({
           name: file.name,
           datas: base64Data,
-          res_model: "project.task",
-          res_id: task.id,
+          res_model: resModel,
+          res_id: resId,
         });
         onUpdate();
       } catch (err) {
@@ -109,10 +124,10 @@ const Chatter = ({ task, onUpdate }) => {
             style={{ display: "none" }}
             onChange={handleFileChange}
           />
-          <Followers followerIds={task.message_follower_ids} />
+          <Followers followerIds={initialFollowerIds} />
           <FollowButton
-            taskId={task.id}
-            followerIds={task.message_follower_ids}
+            taskId={resId} // Dùng resId
+            followerIds={initialFollowerIds}
             onFollowersChange={onUpdate}
           />
         </div>

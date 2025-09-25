@@ -1,6 +1,36 @@
 import axiosInstance from "../../util/axios_instance";
 import URL from "../../util/url";
 
+/**
+ * Lấy thông tin chi tiết của người dùng (res.users) từ partner_id.
+ * @param {number} partnerId ID của res.partner
+ * @returns {Promise<object|null>} Thông tin của người dùng hoặc null.
+ */
+export const fetchUserByPartnerId = async (partnerId) => {
+  if (!partnerId) return null;
+  const params = {
+    model: "res.users",
+    method: "search_read",
+    args: [[["partner_id", "=", partnerId]]],
+    kwargs: {
+      fields: ["id", "name", "image_128"], // Lấy ảnh đại diện từ res.users
+      limit: 1,
+    },
+  };
+  const response = await axiosInstance.post(URL.RPC_CALL, {
+    jsonrpc: "2.0",
+    params,
+  });
+  if (response.data.error) {
+    console.error(
+      "Error fetching user by partner_id:",
+      response.data.error.data.message
+    );
+    return null;
+  }
+  return response.data.result?.[0] || null;
+};
+
 //MESSAGE & CHATTER APIS
 
 /**
@@ -42,6 +72,36 @@ export const fetchMessages = async (messageIds) => {
     throw err;
   }
 };
+
+/**
+ * Lấy TẤT CẢ ID tin nhắn (mail.message) cho một đối tượng cụ thể.
+ * @param {string} resModel - Model của đối tượng (vd: 'project.task')
+ * @param {number} resId - ID của đối tượng (vd: 26)
+ * @returns {Promise<number[]>} - Mảng chứa tất cả ID của tin nhắn.
+ */
+export const fetchAllMessageIds = async (resModel, resId) => {
+  if (!resModel || !resId) return [];
+  const params = {
+    model: "mail.message",
+    method: "search", // Dùng 'search' chỉ để lấy ID, rất nhanh
+    args: [
+      [
+        ["model", "=", resModel],
+        ["res_id", "=", resId],
+      ],
+    ],
+    kwargs: {
+      order: "id asc", // Sắp xếp theo ID để giữ đúng thứ tự
+    },
+  };
+  const response = await axiosInstance.post(URL.RPC_CALL, {
+    jsonrpc: "2.0",
+    params,
+  });
+  if (response.data.error) throw new Error(response.data.error.data.message);
+  return response.data.result || [];
+};
+
 /**
  * Lấy chi tiết của những người theo dõi (mail.followers) từ ID của họ.
  * @param {number[]} followerIds - Mảng các ID của mail.followers

@@ -7,6 +7,7 @@ import { FaPaperclip } from "react-icons/fa";
 import {
   fetchAttachmentDetails,
   fetchBase64Image,
+  fetchUserByPartnerId,
 } from "../../../services/api";
 import defaultAvatar from "../../../assets/images/default-avatar.png";
 
@@ -22,16 +23,27 @@ const ChatMessage = ({ message }) => {
   // Dùng useEffect để lấy ảnh avatar một cách an toàn
   useEffect(() => {
     const loadAvatar = async () => {
-      if (authorPartnerId) {
-        // Dùng tên trường avatar_128 để có ảnh nhỏ, tối ưu hơn
-        const imageUrl = `/web/image/res.partner/${authorPartnerId}/avatar_128`;
-        const imageData = await fetchBase64Image(imageUrl);
-        // Chỉ cập nhật nếu tải thành công, nếu không vẫn giữ ảnh mặc định
-        if (imageData) {
-          setAvatarSrc(imageData);
+      if (!authorPartnerId) {
+        setAvatarSrc(defaultAvatar);
+        return;
+      }
+
+      // Ưu tiên 1: Thử lấy ảnh trực tiếp từ res.partner
+      let imageUrl = `/web/image/res.partner/${authorPartnerId}/avatar_128`;
+      let imageData = await fetchBase64Image(imageUrl);
+
+      // Ưu tiên 2: Nếu thất bại, tìm user tương ứng và lấy ảnh từ res.users
+      if (!imageData) {
+        const user = await fetchUserByPartnerId(authorPartnerId);
+        if (user && user.image_128) {
+          // Nếu user có ảnh, dùng dữ liệu base64 trực tiếp
+          setAvatarSrc(`data:image/png;base64,${user.image_128}`);
+        } else {
+          // Nếu vẫn không có, dùng ảnh mặc định
+          setAvatarSrc(defaultAvatar);
         }
       } else {
-        setAvatarSrc(defaultAvatar);
+        setAvatarSrc(imageData);
       }
     };
     loadAvatar();
@@ -59,7 +71,6 @@ const ChatMessage = ({ message }) => {
   return (
     <div className={`chatter-message d-flex ${isNote ? "is-note" : ""}`}>
       <div className="message-sidebar">
-        {/* Dùng state avatarSrc để đảm bảo ảnh luôn hiển thị */}
         <img src={avatarSrc} alt={authorName} className="message-avatar" />
       </div>
       <div className="message-core">
