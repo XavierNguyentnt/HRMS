@@ -5,3 +5,4 @@ export * from "./hrAPI";
 export * from "./projectAPI";
 export * from "./taskAPI";
 export * from "./chatterAPI";
+export * from "./dashboardAPI";

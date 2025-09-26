@@ -460,3 +460,28 @@ h1 {
 .message-attachments a:hover {
   text-decoration: underline;
 }
+
+/*DASHBOARD*/
+/* App.css */
+/*StatCard*/
+.stat-card {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+  border: none;
+  border-radius: 8px;
+  transition: transform 0.2s;
+}
+.stat-card:hover {
+  transform: translateY(-5px);
+}
+.stat-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.stat-value {
+  font-size: 2.2rem;
+  font-weight: 700;
+}
+.stat-icon {
+  font-size: 2rem;
+  opacity: 0.3;
+}

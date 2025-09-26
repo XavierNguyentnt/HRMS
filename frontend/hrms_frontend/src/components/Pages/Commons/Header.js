@@ -32,15 +32,7 @@ function Header() {
             {user && (
               <>
                 <Nav.Link as={Link} to="/dashboard">
-                  Bảng điều khiển
-                </Nav.Link>
-
-                <Nav.Link as={Link} to="/departments">
-                  Phòng Ban
-                </Nav.Link>
-
-                <Nav.Link as={Link} to="/employees">
-                  Nhân Viên
+                  Trang chủ
                 </Nav.Link>
 
                 <NavDropdown title="Dự án & Nhiệm vụ" id="project-nav-dropdown">
@@ -55,6 +47,14 @@ function Header() {
                     Tất cả nhiệm vụ
                   </NavDropdown.Item>
                 </NavDropdown>
+
+                <Nav.Link as={Link} to="/departments">
+                  Phòng Ban
+                </Nav.Link>
+
+                <Nav.Link as={Link} to="/employees">
+                  Nhân Viên
+                </Nav.Link>
               </>
             )}
           </Nav>
