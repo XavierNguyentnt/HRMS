@@ -4,6 +4,29 @@ import URL from "../../util/url";
 // ============================
 // TASKS
 // ============================
+// HÀM MỚI: Lấy tất cả các giai đoạn của task trong hệ thống
+export const fetchAllTaskStages = async () => {
+  const params = {
+    model: "project.task.type", // Model của stage task
+    method: "search_read",
+    args: [[]], // Không có domain để lấy tất cả
+    kwargs: {
+      fields: ["id", "name", "sequence", "fold"],
+      order: "sequence asc",
+    },
+  };
+  try {
+    const response = await axiosInstance.post(URL.RPC_CALL, {
+      jsonrpc: "2.0",
+      params,
+    });
+    if (response.data.error) throw new Error(response.data.error.data.message);
+    return response.data.result || [];
+  } catch (error) {
+    throw new Error(error.message || "Lỗi tải tất cả các giai đoạn của task");
+  }
+};
+
 // HÀM MỚI: Lấy tất cả các giai đoạn của task cho một dự án cụ thể (dùng cho Kanban)
 export const fetchTaskStagesForProject = async (projectIds) => {
   const params = {

@@ -3,6 +3,8 @@ import axiosInstance from "../../util/axios_instance";
 import URL from "../../util/url";
 import { format, subMonths, startOfMonth, getMonth, getYear } from "date-fns";
 import { ROLES } from "../../contexts/AuthContext"; // Import ROLES để so sánh
+import { fetchTasksByDomain } from "./taskAPI";
+import { fetchAllTaskStages } from "./taskAPI";
 
 /**
  * Xây dựng domain lọc dựa trên vai trò của người dùng.
@@ -115,71 +117,91 @@ export const getDashboardStats = async (role, userId) => {
 /**
  * Lấy dữ liệu tiến độ cá nhân của người dùng.
  */
-export const getMyProgress = async (userId) => {
-  if (!userId) return { completed: 0, inProgress: 0, notStarted: 0 };
-  const domain = [["user_ids", "in", [userId]]];
-  const calls = {
-    completed: {
-      model: "project.task",
-      method: "search_count",
-      args: [[...domain, ["is_closed", "=", true]]],
-      kwargs: {},
-    },
-    inProgress: {
-      model: "project.task",
-      method: "search_count",
-      args: [
-        [...domain, ["is_closed", "=", false], ["stage_id.fold", "=", false]],
-      ],
-      kwargs: {},
-    },
-    notStarted: {
-      model: "project.task",
-      method: "search_count",
-      args: [[...domain, ["is_closed", "=", false], ["sequence", "=", 0]]],
-      kwargs: {},
-    },
-  };
+export const getMyProgress = async (role, userId) => {
+  if (!userId) {
+    return [];
+  }
 
-  const [completedRes, inProgressRes, notStartedRes] = await Promise.all(
-    Object.values(calls).map((call) =>
-      axiosInstance.post(URL.RPC_CALL, { jsonrpc: "2.0", params: call })
-    )
-  );
+  try {
+    // 1. Lấy toàn bộ stages
+    const allStages = await fetchAllTaskStages();
 
-  return {
-    completed: completedRes.data.result || 0,
-    inProgress: inProgressRes.data.result || 0,
-    notStarted: notStartedRes.data.result || 0,
-  };
+    // 2. Domain: test cả user_id + user_ids + create_uid
+    const domain = [
+      "|",
+      ["user_ids", "in", [userId]],
+      ["create_uid", "=", userId],
+    ];
+
+    console.log("Domain used:", domain);
+
+    // 3. Gọi Odoo read_group
+    const params = {
+      model: "project.task",
+      method: "read_group",
+      args: [domain, ["stage_id"], ["stage_id"]],
+      kwargs: { lazy: false },
+    };
+
+    const response = await axiosInstance.post(URL.RPC_CALL, {
+      jsonrpc: "2.0",
+      params,
+    });
+
+    if (response.data.error) throw new Error(response.data.error.data.message);
+
+    console.log("Raw groups from Odoo:", response.data.result);
+
+    const groups = response.data.result || [];
+
+    // 4. Map stage_id -> count
+    const groupMap = new Map();
+    groups.forEach((g) => {
+      if (Array.isArray(g.stage_id) && g.stage_id.length > 0) {
+        groupMap.set(g.stage_id[0], g.__count);
+      }
+    });
+
+    console.log("Groups detail:", JSON.stringify(groups, null, 2));
+
+    // 5. Merge với toàn bộ stage
+    const progressData = allStages.map((stage) => ({
+      id: stage.id,
+      name: stage.name,
+      count: groupMap.get(stage.id) || 0,
+    }));
+
+    console.log("API Result from getMyProgress (final):", progressData);
+    return progressData;
+  } catch (error) {
+    console.error("Lỗi khi tải MyProgress:", error);
+    return [];
+  }
 };
 
 /**
  * Lấy danh sách các công việc của tôi.
  */
-export const getMyTasks = async (userId, limit = 5) => {
+export const getMyTasks = async (role, userId, limit = 5) => {
   if (!userId) return [];
-  const params = {
-    model: "project.task",
-    method: "search_read",
-    args: [
-      [
-        ["user_ids", "in", [userId]],
-        ["is_closed", "=", false],
-      ],
-    ],
-    kwargs: {
-      fields: ["id", "name", "date_deadline", "project_id", "priority"],
-      limit: limit,
-      order: "date_deadline asc, priority desc",
-    },
-  };
-  const response = await axiosInstance.post(URL.RPC_CALL, {
-    jsonrpc: "2.0",
-    params,
-  });
-  if (response.data.error) throw new Error(response.data.error.data.message);
-  return response.data.result || [];
+  try {
+    const domain = buildUserDomain(role, userId, "task");
+
+    // Sắp xếp để các task chưa hoàn thành và có deadline gần nhất lên đầu
+    const order = "is_closed asc, date_deadline asc, priority desc";
+
+    const { tasks } = await fetchTasksByDomain({
+      domain,
+      page: 1,
+      pageSize: limit,
+      order: order,
+    });
+
+    return tasks;
+  } catch (error) {
+    console.error("Lỗi khi tải MyTasks:", error);
+    return [];
+  }
 };
 
 /**

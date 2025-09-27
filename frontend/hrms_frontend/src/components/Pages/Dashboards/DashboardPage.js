@@ -25,41 +25,49 @@ import TeamPerformance from "../dashboard_components/TeamPerformance";
 
 function DashboardPage() {
   const { user, role } = useAuth();
-  const [data, setData] = useState(null);
+  // SỬA LỖI: Khởi tạo data với cấu trúc rỗng để tránh lỗi undefined
+  const [data, setData] = useState({
+    stats: {},
+    progress: [],
+    tasks: [],
+    analysis: [],
+    team: [],
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Dùng useCallback để ổn định tham chiếu của hàm loadDashboardData
   const loadDashboardData = useCallback(async () => {
-    // Chỉ thực thi nếu có user và role đã được xác định
     if (!user?.uid || !role || role === ROLES.UNKNOWN) {
       setLoading(false);
       return;
     }
-
     setLoading(true);
     setError(null);
     try {
-      const [stats, progress, tasks, analysis, team] = await Promise.all([
+      // Tải các dữ liệu chính trước
+      const [stats, progress, tasks, analysis] = await Promise.all([
         getDashboardStats(role, user.uid),
-        getMyProgress(user.uid),
-        getMyTasks(user.uid),
+        getMyProgress(role, user.uid),
+        getMyTasks(role, user.uid),
         getProjectAnalysisData(role, user.uid),
-        // Chỉ gọi API này nếu là Admin/Manager để tối ưu
-        role === ROLES.ADMIN || role === ROLES.MANAGER
-          ? getTeamPerformanceData()
-          : Promise.resolve([]),
       ]);
-      setData({ stats, progress, tasks, analysis, team });
+
+      // Cập nhật state với dữ liệu chính
+      setData((prev) => ({ ...prev, stats, progress, tasks, analysis }));
+
+      // Tải dữ liệu team performance riêng nếu có quyền
+      if (role === ROLES.ADMIN || role === ROLES.MANAGER) {
+        const teamData = await getTeamPerformanceData();
+        setData((prev) => ({ ...prev, team: teamData }));
+      }
     } catch (err) {
       setError("Không thể tải dữ liệu Dashboard.");
       console.error("Dashboard Error:", err);
     } finally {
       setLoading(false);
     }
-  }, [user, role]); // Hàm này giờ phụ thuộc vào user và role
+  }, [user, role]);
 
-  // useEffect chính chỉ gọi hàm đã được ổn định hóa
   useEffect(() => {
     loadDashboardData();
   }, [loadDashboardData]);
@@ -89,6 +97,9 @@ function DashboardPage() {
   }
 
   const { stats, progress, tasks, analysis, team } = data;
+  const myTotalTasks = Array.isArray(tasks) ? tasks.length : 0;
+
+  console.log("Data passed to MyProgressChart:", progress);
 
   return (
     <Container fluid className="p-4">
@@ -126,9 +137,7 @@ function DashboardPage() {
         <Col xl={3} md={6} className="mb-3">
           <StatCard
             title="Nhiệm vụ của tôi"
-            value={
-              progress.completed + progress.inProgress + progress.notStarted
-            }
+            value={myTotalTasks} // SỬ DỤNG GIÁ TRỊ MỚI
             icon={<FaExclamationTriangle size={30} />}
             color="#f5365c"
             linkTo="/tasks?filter=my"
@@ -148,13 +157,19 @@ function DashboardPage() {
 
       {/* Hàng Team Performance và Ghi chú */}
       <Row>
-        {(role === ROLES.ADMIN || role === ROLES.MANAGER) && (
-          <Col lg={8} className="mb-4">
-            <TeamPerformance data={team} />
-          </Col>
-        )}
+        {/* Chỉ render component này khi có dữ liệu team */}
+        {(role === ROLES.ADMIN || role === ROLES.MANAGER) &&
+          team.length > 0 && (
+            <Col lg={8} className="mb-4">
+              <TeamPerformance data={team} />
+            </Col>
+          )}
         <Col
-          lg={role === ROLES.ADMIN || role === ROLES.MANAGER ? 4 : 12}
+          lg={
+            (role === ROLES.ADMIN || role === ROLES.MANAGER) && team.length > 0
+              ? 4
+              : 12
+          }
           className="mb-4">
           <TomorrowNoteWidget />
         </Col>
