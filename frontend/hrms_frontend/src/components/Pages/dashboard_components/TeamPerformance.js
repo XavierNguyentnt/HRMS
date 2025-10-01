@@ -10,7 +10,9 @@ const TeamPerformance = ({ data = [] }) => {
   return (
     <Card className="h-100">
       <Card.Header>
-        <Card.Title>Hiệu suất Nhóm</Card.Title>
+        <Card.Title>
+          <strong>Hiệu suất Nhóm</strong>
+        </Card.Title>
       </Card.Header>
       <Card.Body>
         {/* Xử lý trường hợp không có dữ liệu */}

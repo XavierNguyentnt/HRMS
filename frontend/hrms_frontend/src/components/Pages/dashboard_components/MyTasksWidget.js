@@ -2,6 +2,7 @@
 import React from "react";
 import { Card, ListGroup, Button } from "react-bootstrap";
 import { Link, useNavigate } from "react-router-dom"; // Import Link và useNavigate
+import PriorityIndicator from "../task_components/PriorityIndicator";
 
 const MyTasksWidget = ({ tasks }) => {
   const navigate = useNavigate();
@@ -10,7 +11,9 @@ const MyTasksWidget = ({ tasks }) => {
     <Card className="h-100">
       <Card.Body>
         <div className="d-flex justify-content-between align-items-center">
-          <Card.Title>Công việc của tôi</Card.Title>
+          <Card.Title>
+            <strong>Công việc của tôi</strong>
+          </Card.Title>
           <Button
             variant="link"
             size="sm"
@@ -23,22 +26,23 @@ const MyTasksWidget = ({ tasks }) => {
             tasks.map((task) => (
               <ListGroup.Item
                 key={task.id}
-                action // Prop này làm cho item có thể click
-                as={Link} // Render như một thẻ Link
-                to={`/projects/${task.project_id[0]}/tasks/${task.id}`} // Đường dẫn chi tiết
+                action
+                as={Link}
+                to={`/projects/${task.project_id[0]}/tasks/${task.id}`}
                 className="d-flex justify-content-between align-items-center">
                 <div>
-                  <span className="fw-bold">{task.name}</span>
+                  <span className="fw-bold me-2">{task.name}</span>
+                  <PriorityIndicator priority={task.priority} />
                   <small className="d-block text-muted">
                     {task.project_id[1]}
                   </small>
                 </div>
-                <span
+                {/* <span
                   className={`badge bg-${
                     task.priority === "1" ? "danger" : "secondary"
                   }`}>
                   {task.priority === "1" ? "Cao" : "Thường"}
-                </span>
+                </span> */}
               </ListGroup.Item>
             ))
           ) : (

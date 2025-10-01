@@ -18,7 +18,9 @@ const TomorrowNoteWidget = () => {
   return (
     <Card className="h-100">
       <Card.Body>
-        <Card.Title>Ghi chú cho Ngày mai</Card.Title>
+        <Card.Title>
+          <strong>Ghi chú cho Ngày mai</strong>
+        </Card.Title>
         <Form.Control
           as="textarea"
           rows={8}

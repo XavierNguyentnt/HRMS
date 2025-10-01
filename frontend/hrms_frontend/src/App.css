@@ -40,7 +40,7 @@ body {
 h1 {
   font-family: "Quicksand", serif !important;
   font-weight: bolder !important;
-  font-size: 2.2rem !important;
+  font-size: 2rem !important;
 }
 
 /* Custom styles for Project components */
@@ -145,7 +145,7 @@ h1 {
 
 /* Định nghĩa chiều rộng tối thiểu cho từng cột */
 .unified-table .col-name {
-  min-width: 250px;
+  min-width: 500px;
 }
 .unified-table .col-customer {
   min-width: 180px;
@@ -216,53 +216,58 @@ h1 {
 }
 
 .stage-badge {
-  padding: 2px 10px;
-  border-radius: 12px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #fff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25); /* Đổ bóng làm nổi bật stage */
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 0.4em;
+  padding: 0.3em 0.8em;
+  border-radius: 1em;
+  font-weight: 600;
+  font-size: 0.9em; /* Tăng kích thước chữ một chút cho dễ đọc */
+  color: white;
+  white-space: nowrap;
+  border: 1px solid rgba(0, 0, 0, 0.1); /* Thêm viền nhẹ cho đẹp hơn */
 }
 
+/* Bộ 12 màu được tạo sẵn */
 .stage-color-0 {
-  background-color: #6c757d;
-}
+  background-color: #4a90e2;
+} /* Blue */
 .stage-color-1 {
-  background-color: #337ab7;
-}
+  background-color: #50e3c2;
+  color: #333;
+} /* Teal */
 .stage-color-2 {
-  background-color: #f4a460;
-}
+  background-color: #f5a623;
+} /* Orange */
 .stage-color-3 {
-  background-color: #55b761;
-}
+  background-color: #7ed321;
+} /* Green */
 .stage-color-4 {
-  background-color: #875a7b;
-}
+  background-color: #9013fe;
+} /* Purple */
 .stage-color-5 {
-  background-color: #f06050;
-}
+  background-color: #f8e71c;
+  color: #333;
+} /* Yellow */
 .stage-color-6 {
-  background-color: #f7cd1f;
-}
+  background-color: #d0021b;
+} /* Red */
 .stage-color-7 {
-  background-color: #29ab87;
-}
+  background-color: #bd10e0;
+} /* Magenta */
 .stage-color-8 {
-  background-color: #4c6a8a;
-}
+  background-color: #417505;
+} /* Dark Green */
 .stage-color-9 {
-  background-color: #f06e6b;
-}
+  background-color: #8b572a;
+} /* Brown */
 .stage-color-10 {
-  background-color: #a76489;
-}
+  background-color: #b8e986;
+  color: #333;
+} /* Light Green */
 .stage-color-11 {
-  background-color: #c97983;
-}
+  background-color: #6c757d;
+} /* Gray (thay cho #9b9b9b) */
 
 /*Task status bars*/
 
@@ -407,8 +412,8 @@ h1 {
   flex-shrink: 0;
 }
 .message-avatar {
-  width: 40px;
-  height: 40px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   object-fit: cover;
 }

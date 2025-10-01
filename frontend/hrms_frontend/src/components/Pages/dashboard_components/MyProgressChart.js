@@ -3,32 +3,42 @@ import React from "react";
 import { Doughnut } from "react-chartjs-2";
 import { Card } from "react-bootstrap";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
+import { cleanStageName } from "../../../util/formatters";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 // Mảng màu sắc để biểu đồ trông đẹp hơn
 const CHART_COLORS = [
-  "#ffc107", // Vàng (Warning)
+  "#6c757d", // Vàng (Warning)
   "#17a2b8", // Xanh dương (Info)
-  "#6c757d", // Xám (Secondary)
+  "#20c997", // Xám (Secondary)
   "#fd7e14", // Cam (Orange)
-  "#20c997", // Xanh mòng két (Teal)
+  "#ffc107", // Xanh mòng két (Teal)
   "#6610f2", // Chàm (Indigo)
 ];
 
+// Stage hợp lệ của task (Odoo 18 project.task.type)
+const VALID_TASK_STAGES = [
+  "Chuẩn bị",
+  "Đang tiến hành",
+  "Hoàn thành",
+  "Đã huỷ",
+];
+
 const MyProgressChart = ({ data }) => {
-  // `data` bây giờ là một mảng: [{ id, name, count }, ...]
-  const total = data.reduce((sum, item) => sum + item.count, 0);
+  // Chỉ giữ lại stage hợp lệ
+  const filteredData = data.filter((item) =>
+    VALID_TASK_STAGES.includes(cleanStageName(item.name))
+  );
+
+  const total = filteredData.reduce((sum, item) => sum + item.count, 0);
 
   const chartData = {
-    // Lấy tên các giai đoạn làm nhãn
-    labels: data.map((item) => item.name),
+    labels: filteredData.map((item) => cleanStageName(item.name)),
     datasets: [
       {
-        // Lấy số lượng task làm dữ liệu
-        data: data.map((item) => item.count),
-        // Lấy màu từ mảng CHART_COLORS, lặp lại nếu cần
-        backgroundColor: data.map(
+        data: filteredData.map((item) => item.count),
+        backgroundColor: filteredData.map(
           (_, index) => CHART_COLORS[index % CHART_COLORS.length]
         ),
         borderColor: "#fff",
@@ -50,7 +60,9 @@ const MyProgressChart = ({ data }) => {
   return (
     <Card className="h-100">
       <Card.Body>
-        <Card.Title>Tiến độ của tôi</Card.Title>
+        <Card.Title>
+          <strong>Tiến độ của tôi</strong>
+        </Card.Title>
         <div
           style={{ height: "250px" }}
           className="d-flex justify-content-center align-items-center">

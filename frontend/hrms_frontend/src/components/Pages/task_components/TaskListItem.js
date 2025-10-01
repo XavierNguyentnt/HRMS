@@ -4,6 +4,8 @@ import { Button, ButtonGroup, Form } from "react-bootstrap";
 import ProgressBar from "../project_components/ProgressBar";
 import ProjectTags from "../project_components/ProjectTags";
 import StatusIndicator from "../project_components/StatusIndicator";
+import PriorityIndicator from "./PriorityIndicator";
+import PriorityLevelBadge from "./PriorityLevelBadge";
 
 const TaskListItem = ({
   task,
@@ -50,7 +52,10 @@ const TaskListItem = ({
             onClick={(e) => e.stopPropagation()}
           />
         ) : (
-          <strong>{task.name}</strong>
+          <div className="d-flex align-items-center gap-2">
+            <strong>{task.name}</strong>
+            <PriorityIndicator priority={task.priority} />
+          </div>
         );
       // ... các case khác không đổi
       case "progress":
@@ -64,6 +69,8 @@ const TaskListItem = ({
         return (
           <StatusIndicator stage={task.stage_id} isFolded={task.is_closed} />
         );
+      case "priority_level": // <-- THÊM CASE MỚI
+        return <PriorityLevelBadge priorityLevel={task.priority_level} />;
       case "personal_stage_type_id":
         return <StatusIndicator stage={task.personal_stage_type_id} />;
       default:
@@ -104,7 +111,12 @@ const TaskListItem = ({
           </Button>
 
           {/* THAY ĐỔI: Nút "Chi tiết" giờ cũng sẽ điều hướng */}
-          <Button variant="info" onClick={() => onNavigate(task.id)}>
+          <Button
+            variant="info"
+            onClick={(e) => {
+              e.stopPropagation();
+              onNavigate(task.id);
+            }}>
             Chi tiết
           </Button>
         </ButtonGroup>

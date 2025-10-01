@@ -45,6 +45,7 @@ const PROFILE_FIELDS = [
   "pin",
   "barcode",
   "image_1920",
+  "image_128",
   "employee_skill_ids",
   "resume_line_ids",
 ];

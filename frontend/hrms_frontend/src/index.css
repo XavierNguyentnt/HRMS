@@ -1,13 +1,83 @@
+/*FONT & TYPOGRAPHY */
+html {
+  font-size: 90%;
+}
+
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s, color 0.3s;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+/*
+ * THEME & COLOR VARIABLES
+ * Lấy cảm hứng từ Monday.com với các biến màu cho Light, Dark theme
+ * và tự động chọn theme theo hệ thống.
+ */
+
+/* 1. Light Theme (Mặc định) */
+:root {
+  --sidebar-width: 250px;
+  --sidebar-width-collapsed: 70px;
+
+  --header-bg: #ffffff;
+  --sidebar-bg: #f6f7f9;
+  --main-content-bg: #f0f3f6;
+  --card-bg: #ffffff;
+
+  --text-primary: #323338;
+  --text-secondary: #676879;
+  --text-on-primary-bg: #ffffff;
+
+  --primary-color: #0073ea;
+  --primary-color-hover: #005bb7;
+
+  --border-color: #e6e9ef;
+  --shadow-color: rgba(0, 0, 0, 0.05);
+}
+
+/* 2. Dark Theme */
+[data-theme="dark"] {
+  --header-bg: #202020;
+  --sidebar-bg: #2c2c2c;
+  --main-content-bg: #181818;
+  --card-bg: #2c2c2c;
+
+  --text-primary: #e0e0e0;
+  --text-secondary: #a0a0a0;
+
+  --primary-color: #3d9dff;
+  --primary-color-hover: #66b5ff;
+
+  --border-color: #404040;
+  --shadow-color: rgba(0, 0, 0, 0.4);
+}
+
+/* 3. Tự động chọn theme dựa trên cài đặt hệ thống */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --header-bg: #202020;
+    --sidebar-bg: #2c2c2c;
+    --main-content-bg: #181818;
+    --card-bg: #2c2c2c;
+
+    --text-primary: #e0e0e0;
+    --text-secondary: #a0a0a0;
+
+    --primary-color: #3d9dff;
+    --primary-color-hover: #66b5ff;
+
+    --border-color: #404040;
+    --shadow-color: rgba(0, 0, 0, 0.4);
+  }
+}
+
+/* Gán màu cho các thành phần cơ bản */
+body {
+  background-color: var(--main-content-bg);
+  color: var(--text-primary);
 }

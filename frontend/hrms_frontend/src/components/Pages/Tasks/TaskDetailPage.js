@@ -22,6 +22,8 @@ import {
 import StatusIndicator from "../project_components/StatusIndicator";
 import Chatter from "../task_components/Chatter";
 // import TaskEditForm from './TaskEditForm'; // Sẽ tạo form sửa sau
+import PriorityIndicator from "../task_components/PriorityIndicator";
+import PriorityLevelBadge from "../task_components/PriorityLevelBadge";
 
 const TaskDetailPage = () => {
   const { projectId, taskId } = useParams();
@@ -104,7 +106,11 @@ const TaskDetailPage = () => {
       <Row>
         <Col md={8}>
           <div className="d-flex justify-content-between align-items-center mb-3">
-            <h1>{task.name}</h1>
+            <div className="d-flex justify-content-left align-items-center">
+              {task.priority === "1"}
+              <PriorityIndicator priority={task.priority} />
+              <h1>{task.name}</h1>
+            </div>
             <div>
               {isEditing ? (
                 <>
@@ -143,7 +149,6 @@ const TaskDetailPage = () => {
                   <strong>Thông tin chi tiết</strong>
                 </Card.Header>
                 <Card.Body>
-                  {/* 5. BỔ SUNG THÔNG TIN VÀ TÁI SỬ DỤNG STATUSINDICATOR */}
                   <p className="d-flex justify-content-left align-items-center gap-3">
                     <strong>Trạng thái:</strong>
                     <StatusIndicator
@@ -163,9 +168,10 @@ const TaskDetailPage = () => {
                     <strong>Hạn hoàn thành:</strong>{" "}
                     {task.date_deadline || "Chưa có"}
                   </p>
-                  <p>
-                    <strong>Ưu tiên:</strong>{" "}
-                    {task.priority === "1" ? "Cao" : "Thấp"}
+                  <p className="d-flex align-items-center">
+                    <strong className="me-2">Ưu tiên:</strong>
+
+                    <PriorityLevelBadge priorityLevel={task.priority_level} />
                   </p>
                 </Card.Body>
               </Card>

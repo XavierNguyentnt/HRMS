@@ -39,6 +39,7 @@ const ALL_TASK_COLUMNS = [
   { key: "project_id", label: "Dự án", sortable: true },
   { key: "user_ids", label: "Người được phân công", sortable: false },
   { key: "date_deadline", label: "Thời hạn", sortable: true },
+  { key: "priority_level", label: "Mức độ", sortable: true },
   { key: "progress", label: "Tiến độ", sortable: true },
   { key: "stage_id", label: "Giai đoạn", sortable: true },
 ];
@@ -73,6 +74,7 @@ function TasksPage() {
     "project_id",
     "user_ids",
     "date_deadline",
+    "priority_level",
     "stage_id",
   ]);
 

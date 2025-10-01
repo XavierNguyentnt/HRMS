@@ -5,10 +5,13 @@ import { useAuth } from "./contexts/AuthContext";
 import PrivateRoute from "./components/Routes/PrivateRoute";
 import AdminRoute from "./components/Routes/AdminRoute";
 
-// Import các component
-import Header from "./components/Pages/Commons/Header";
-import LoginPage from "./components/Pages/Auth/LoginPage";
+// Import các component Layout
+import Header from "./components/Layout/Header";
+import Sidebar from "./components/Layout/Sidebar";
+import "./components/Layout/Layout.css";
+
 // import RegisterPage from "./components/Pages/Auth/RegisterPage";
+import LoginPage from "./components/Pages/Auth/LoginPage";
 import ProfilePage from "./components/Pages/User/ProfilePage";
 import DashboardPage from "./components/Pages/Dashboards/DashboardPage";
 import DepartmentsPage from "./components/Pages/Department/DepartmentsPage";
@@ -25,13 +28,15 @@ import TaskDetailPage from "./components/Pages/Tasks/TaskDetailPage";
 // =================================================================
 const MainLayout = () => {
   return (
-    <>
+    <div className="app-layout">
       <Header />
-      {/* Container được chuyển vào từng trang con để linh hoạt hơn */}
-      <main>
-        <Outlet />
-      </main>
-    </>
+      <div className="main-content-wrapper">
+        <Sidebar />
+        <div className="content-area">
+          <Outlet />
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -40,17 +45,13 @@ function App() {
 
   return (
     <div className="App">
+      {/* Phần Routes giữ nguyên như cũ, không cần thay đổi */}
       <Routes>
         <Route
           path="/login"
           element={user ? <Navigate to="/dashboard" /> : <LoginPage />}
         />
-        {/* <Route
-          path="/register"
-          element={user ? <Navigate to="/dashboard" /> : <RegisterPage />}
-        /> */}
 
-        {/* Main layout cho các route bình thường */}
         <Route
           path="/"
           element={user ? <MainLayout /> : <Navigate to="/login" />}>

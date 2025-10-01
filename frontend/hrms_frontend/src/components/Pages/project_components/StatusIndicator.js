@@ -1,6 +1,6 @@
 // src/components/Pages/project_components/StatusIndicator.js
 import React from "react";
-import { FaPlayCircle, FaCheckCircle } from "react-icons/fa";
+import { FaPlayCircle, FaCheckCircle, FaTimesCircle } from "react-icons/fa";
 
 const simpleHash = (str) => {
   let hash = 0;
@@ -41,7 +41,21 @@ const StatusIndicator = ({ stage, isFolded = false }) => {
   }
   const colorClass = `stage-color-${colorIndex}`;
   const displayName = cleanStageName(name);
-  const icon = fold ? <FaCheckCircle /> : <FaPlayCircle />;
+  let icon;
+  const nameLower = name.toLowerCase();
+
+  if (nameLower.includes("hủy") || nameLower.includes("cancel")) {
+    icon = <FaTimesCircle />;
+  } else if (
+    fold ||
+    nameLower.includes("hoàn thành") ||
+    nameLower.includes("done")
+  ) {
+    // Ưu tiên biến `fold` nếu có, nếu không thì dựa vào tên
+    icon = <FaCheckCircle />;
+  } else {
+    icon = <FaPlayCircle />;
+  }
 
   return (
     <span className={`stage-badge ${colorClass}`}>

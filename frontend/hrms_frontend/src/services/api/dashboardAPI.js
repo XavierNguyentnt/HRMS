@@ -1,7 +1,15 @@
 // src/services/api/dashboardAPI.js
 import axiosInstance from "../../util/axios_instance";
 import URL from "../../util/url";
-import { format, subMonths, startOfMonth, getMonth, getYear } from "date-fns";
+import {
+  format,
+  subMonths,
+  startOfMonth,
+  getMonth,
+  getYear,
+  subDays,
+  eachDayOfInterval,
+} from "date-fns";
 import { ROLES } from "../../contexts/AuthContext"; // Import ROLES để so sánh
 import { fetchTasksByDomain } from "./taskAPI";
 import { fetchAllTaskStages } from "./taskAPI";
@@ -179,6 +187,52 @@ export const getMyProgress = async (role, userId) => {
   }
 };
 
+export const getWeeklyTaskActivity = async (role, userId) => {
+  const taskModel = "project.task";
+  const today = new Date();
+  const sevenDaysAgo = subDays(today, 6);
+  const userDomain = buildUserDomain(role, userId, "task");
+
+  const tasksRes = await axiosInstance.post(URL.RPC_CALL, {
+    jsonrpc: "2.0",
+    params: {
+      model: taskModel,
+      method: "search_read",
+      args: [
+        [
+          "|",
+          ["create_date", ">=", format(sevenDaysAgo, "yyyy-MM-dd 00:00:00")],
+          ["date_end", ">=", format(sevenDaysAgo, "yyyy-MM-dd 00:00:00")],
+        ],
+        ...userDomain,
+      ],
+      kwargs: { fields: ["create_date", "date_end", "is_closed"] },
+    },
+  });
+  const tasks = tasksRes.data.result || [];
+
+  const dateInterval = eachDayOfInterval({ start: sevenDaysAgo, end: today });
+  const activityData = dateInterval.map((date) => ({
+    date: format(date, "dd/MM"),
+    created: 0,
+    completed: 0,
+  }));
+
+  tasks.forEach((task) => {
+    const createDateStr = format(new Date(task.create_date), "dd/MM");
+    const createdEntry = activityData.find((d) => d.date === createDateStr);
+    if (createdEntry) createdEntry.created++;
+
+    if (task.is_closed && task.date_end) {
+      const endDateStr = format(new Date(task.date_end), "dd/MM");
+      const completedEntry = activityData.find((d) => d.date === endDateStr);
+      if (completedEntry) completedEntry.completed++;
+    }
+  });
+
+  return activityData;
+};
+
 /**
  * Lấy danh sách các công việc của tôi.
  */
@@ -188,7 +242,7 @@ export const getMyTasks = async (role, userId, limit = 5) => {
     const domain = buildUserDomain(role, userId, "task");
 
     // Sắp xếp để các task chưa hoàn thành và có deadline gần nhất lên đầu
-    const order = "is_closed asc, date_deadline asc, priority desc";
+    const order = "date_end asc NULLS FIRST, date_deadline asc, priority desc";
 
     const { tasks } = await fetchTasksByDomain({
       domain,

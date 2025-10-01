@@ -182,6 +182,7 @@ export const fetchTaskDetails = async (taskId) => {
         "tag_ids",
         "milestone_id",
         "priority",
+        "priority_level",
         "parent_id",
         "child_ids",
         "timesheet_ids",
@@ -238,6 +239,7 @@ export const fetchTasksByDomain = async ({
   domain = [],
   page = 1,
   pageSize = 10,
+  order = "date_deadline desc, priority desc",
 }) => {
   const offset = (page - 1) * pageSize;
 
@@ -267,8 +269,12 @@ export const fetchTasksByDomain = async ({
         "stage_id",
         "date_deadline",
         "project_id",
+        "priority",
+        "priority_level",
+        "is_closed",
+        "date_end",
       ],
-      order: "date_deadline desc, priority desc",
+      order: order,
       limit: pageSize,
       offset: offset,
     },

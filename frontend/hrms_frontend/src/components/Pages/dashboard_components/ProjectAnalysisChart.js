@@ -55,7 +55,9 @@ const ProjectAnalysisChart = ({ data }) => {
   return (
     <Card className="h-100">
       <Card.Body>
-        <Card.Title>Phân tích Dự án</Card.Title>
+        <Card.Title>
+          <strong>Phân tích Dự án</strong>
+        </Card.Title>
         <div style={{ height: "300px" }}>
           <Bar
             data={chartData}

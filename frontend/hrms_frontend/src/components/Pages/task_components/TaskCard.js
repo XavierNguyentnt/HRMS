@@ -2,6 +2,8 @@ import React from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Card } from "react-bootstrap";
+import PriorityIndicator from "./PriorityIndicator";
+import PriorityLevelBadge from "./PriorityLevelBadge";
 
 const TaskCard = ({ task }) => {
   const {
@@ -24,17 +26,25 @@ const TaskCard = ({ task }) => {
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
       <Card className="kanban-card mb-2">
         <Card.Body>
-          <Card.Title className="h6">{task.name}</Card.Title>
+          <div className="d-flex justify-content-between align-items-center mb-2">
+            <Card.Title className="h6">{task.name}</Card.Title>
+            <PriorityIndicator priority={task.priority} />
+          </div>
           <Card.Text as="div" className="small">
             <div>
               <strong>Hạn:</strong> {task.date_deadline || "-"}
             </div>
             <div>
-              <strong>Người TH:</strong>
+              <strong>Người thực hiện:</strong>
               {task.user_ids && task.user_ids.length > 0
                 ? task.user_ids.map((user) => user[1]).join(", ")
                 : "-"}
             </div>
+            {task.priority_level && (
+              <div className="mt-2">
+                <PriorityLevelBadge priorityLevel={task.priority_level} />
+              </div>
+            )}
           </Card.Text>
         </Card.Body>
       </Card>

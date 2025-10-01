@@ -6,7 +6,6 @@ import {
   Col,
   Form,
   Button,
-  Image,
   Tabs,
   Tab,
   Card,
@@ -18,6 +17,7 @@ import {
 import { useAuth, ROLES } from "../../../contexts/AuthContext";
 import * as odooApi from "../../../services/api";
 import { FaTrash, FaPlusCircle } from "react-icons/fa";
+import Avatar from "../../shared/Avatar";
 
 function ProfilePage() {
   // Lấy employeeId từ URL. Nó sẽ là `undefined` nếu URL là '/profile'
@@ -506,20 +506,16 @@ function ProfilePage() {
             {/* VÙNG THÔNG TIN CHÍNH */}
             <Row className="mb-4 align-items-center">
               <Col md={3} className="text-center">
-                <Image
+                <Avatar
                   src={
                     profileData.image_1920
                       ? `data:image/jpeg;base64,${profileData.image_1920}`
-                      : "/default-avatar.png"
+                      : null
                   }
-                  roundedCircle
-                  fluid
-                  style={{
-                    width: "150px",
-                    height: "150px",
-                    objectFit: "cover",
-                    border: "3px solid #eee",
-                  }}
+                  altText={profileData.name}
+                  size={150}
+                  className="profile-main-avatar" // Đặt class riêng để style nếu cần
+                  style={{ border: "3px solid #eee" }}
                 />
               </Col>
               <Col md={9}>

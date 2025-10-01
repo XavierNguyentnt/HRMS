@@ -4,50 +4,15 @@ import { format } from "date-fns";
 import { Spinner } from "react-bootstrap";
 import { FaPaperclip } from "react-icons/fa";
 // SỬA LẠI: Import thêm fetchBase64Image
-import {
-  fetchAttachmentDetails,
-  fetchBase64Image,
-  fetchUserByPartnerId,
-} from "../../../services/api";
-import defaultAvatar from "../../../assets/images/default-avatar.png";
+import { fetchAttachmentDetails } from "../../../services/api";
+import Avatar from "../../shared/Avatar";
 
 const ChatMessage = ({ message }) => {
   const [attachments, setAttachments] = useState([]);
   const [loadingAttachments, setLoadingAttachments] = useState(false);
-  const [avatarSrc, setAvatarSrc] = useState(defaultAvatar); // State để lưu trữ ảnh an toàn
-
   const isNote = message.subtype_id && message.subtype_id[1] === "Ghi chú";
   const authorName = message.author_id ? message.author_id[1] : "Hệ thống";
-  const authorPartnerId = message.author_id ? message.author_id[0] : null;
-
-  // Dùng useEffect để lấy ảnh avatar một cách an toàn
-  useEffect(() => {
-    const loadAvatar = async () => {
-      if (!authorPartnerId) {
-        setAvatarSrc(defaultAvatar);
-        return;
-      }
-
-      // Ưu tiên 1: Thử lấy ảnh trực tiếp từ res.partner
-      let imageUrl = `/web/image/res.partner/${authorPartnerId}/avatar_128`;
-      let imageData = await fetchBase64Image(imageUrl);
-
-      // Ưu tiên 2: Nếu thất bại, tìm user tương ứng và lấy ảnh từ res.users
-      if (!imageData) {
-        const user = await fetchUserByPartnerId(authorPartnerId);
-        if (user && user.image_128) {
-          // Nếu user có ảnh, dùng dữ liệu base64 trực tiếp
-          setAvatarSrc(`data:image/png;base64,${user.image_128}`);
-        } else {
-          // Nếu vẫn không có, dùng ảnh mặc định
-          setAvatarSrc(defaultAvatar);
-        }
-      } else {
-        setAvatarSrc(imageData);
-      }
-    };
-    loadAvatar();
-  }, [authorPartnerId]);
+  const authorPartnerId = message.author_id ? message.author_id[0] : null; // Chúng ta vẫn cần partnerId
 
   const formattedDate = format(new Date(message.date), "dd/MM/yyyy HH:mm");
 
@@ -71,12 +36,18 @@ const ChatMessage = ({ message }) => {
   return (
     <div className={`chatter-message d-flex ${isNote ? "is-note" : ""}`}>
       <div className="message-sidebar">
-        <img src={avatarSrc} alt={authorName} className="message-avatar" />
+        {/* BƯỚC 3: THAY THẾ THẺ <img> BẰNG COMPONENT <Avatar /> */}
+        <Avatar
+          partnerId={authorPartnerId}
+          altText={authorName}
+          className="message-avatar me-2" // Truyền class cũ vào để giữ style
+          size={45} // Kích thước avatar mong muốn
+        />
       </div>
       <div className="message-core">
         <div className="message-header">
           <strong>{authorName}</strong>
-          <span className="message-date text-muted">{formattedDate}</span>
+          <span className="message-date text-muted ms-2">{formattedDate}</span>
         </div>
         <div
           className="message-body"

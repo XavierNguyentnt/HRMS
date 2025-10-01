@@ -5,13 +5,13 @@ import {
   Col,
   Card,
   Spinner,
-  Image,
   Form,
   Button, // MỚI: Thêm Button
   Alert, // MỚI: Thêm Alert để báo lỗi
 } from "react-bootstrap";
 import { useSearchParams, Link } from "react-router-dom"; // MỚI: Thêm Link
 import * as odooApi from "../../../services/api";
+import Avatar from "../../shared/Avatar";
 
 const PAGE_SIZE = 20; // Mỗi lần tải 20 nhân viên
 
@@ -121,20 +121,16 @@ function EmployeesPage() {
               <Link to={`/profile/${emp.id}`} className="text-decoration-none">
                 <Card className="h-100 text-center employee-card">
                   <Card.Body>
-                    <Image
+                    <Avatar
                       src={
                         emp.image_128
                           ? `data:image/jpeg;base64,${emp.image_128}`
-                          : "/default-avatar.png"
+                          : null
                       }
-                      roundedCircle
-                      style={{
-                        width: "90px",
-                        height: "90px",
-                        objectFit: "cover",
-                        marginBottom: "15px",
-                        border: "3px solid #eee",
-                      }}
+                      altText={emp.name}
+                      size={90}
+                      className="mb-3"
+                      style={{ border: "3px solid #eee" }}
                     />
                     <Card.Title as="h6" className="fw-bold text-dark">
                       {emp.name}
