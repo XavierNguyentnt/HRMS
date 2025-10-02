@@ -109,7 +109,7 @@ const Sidebar = () => {
                 !isSidebarOpen ? "disabled-click" : ""
               }`}>
               <BriefcaseFill className="sidebar-icon" />
-              <span className="sidebar-link-text">Dự án & Nhiệm vụ</span>
+              <span className="sidebar-link-text ">Dự án & Nhiệm vụ</span>
               <ChevronDown
                 className={`chevron-icon ${isProjectsOpen ? "open" : ""}`}
               />

@@ -148,25 +148,25 @@ h1 {
   min-width: 500px;
 }
 .unified-table .col-customer {
-  min-width: 180px;
+  min-width: 500px;
 }
 .unified-table .col-company {
-  min-width: 180px;
+  min-width: 600px;
 }
 .unified-table .col-date {
   min-width: 200px;
 }
 .unified-table .col-progress {
-  min-width: 150px;
+  min-width: 600px;
 }
 .unified-table .col-manager {
-  min-width: 150px;
+  min-width: 600px;
 }
 .unified-table .col-tags {
   min-width: 200px;
 }
 .unified-table .col-status {
-  min-width: 120px;
+  min-width: 600px;
 }
 .unified-table .col-hours {
   min-width: 130px;
@@ -185,6 +185,74 @@ h1 {
 
 .project-task-table .table-group-header:hover {
   background-color: #e9ecef;
+}
+
+/* =============================================== */
+/* == STICKY TABLE HEADER & FIRST COLUMN STYLES == */
+/* =============================================== */
+
+/* 1. Container cho bảng */
+.table-sticky-container {
+  overflow: auto; /* Bật thanh cuộn khi cần */
+  max-height: calc(100vh - 350px);
+  position: relative; /* Cần thiết cho hoạt động của sticky */
+  border: 1px solid var(--border-color);
+  border-radius: 8px; /* Giữ bo góc */
+}
+
+/* 2. Cấu hình cơ bản cho bảng bên trong */
+.table-sticky-container .unified-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 100%;
+  table-layout: fixed;
+  width: auto;
+}
+
+/* 3. Cố định toàn bộ Header (thead) */
+.table-sticky-container thead th {
+  position: -webkit-sticky; /* Cho Safari */
+  position: sticky;
+  top: 0;
+}
+
+/* 4. Cố định Header của các nhóm (ví dụ: tên trạng thái) */
+.table-sticky-container tbody.table-group .table-group-header th {
+  position: -webkit-sticky; /* Cho Safari */
+  position: sticky;
+  top: 50px;
+  z-index: 2;
+  background-color: var(--hover-bg-color);
+}
+
+/* 5. Cố định CỘT ĐẦU TIÊN (cả th và td) */
+.table-sticky-container th:first-child,
+.table-sticky-container td:first-child {
+  position: -webkit-sticky; /* Cho Safari */
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  /* Thêm viền phải để tạo ranh giới rõ ràng khi cuộn */
+  border-right: 2px solid var(--border-color);
+}
+
+/* 6. Cung cấp màu nền cho cột đầu tiên để che nội dung bên dưới khi cuộn */
+.table-sticky-container thead th:first-child {
+  background-color: var(--header-bg-color); /* Đồng bộ với màu header */
+}
+
+.table-sticky-container tbody td:first-child {
+  background-color: var(--color-bg-light); /* Màu nền của dòng */
+}
+
+/* Khi hover, đổi màu nền cả cột đầu tiên */
+.table-sticky-container tbody tr:hover td:first-child {
+  background-color: var(--row-hover-bg);
+}
+
+/* 7. Xử lý góc trên cùng bên trái (quan trọng nhất) */
+.table-sticky-container thead th:first-child {
+  z-index: 3; /* Phải có z-index cao nhất để nằm trên tất cả */
 }
 
 /* Custom Progress Bar */
@@ -478,15 +546,18 @@ h1 {
 .stat-card:hover {
   transform: translateY(-5px);
 }
-.stat-title {
-  font-size: 0.9rem;
-  font-weight: 600;
+.stat-card .stat-title {
+  font-size: 1.2rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
 }
-.stat-value {
-  font-size: 2.2rem;
+.stat-card .stat-value {
+  font-size: 1.8rem;
   font-weight: 700;
+  color: var(--color-text-body);
 }
-.stat-icon {
+.stat-card .stat-icon {
   font-size: 2rem;
   opacity: 0.3;
 }

@@ -36,7 +36,7 @@ import {
 
 const ALL_COLUMNS = [
   // ... giữ nguyên
-  { key: "display_name", label: "Tên", sortable: true },
+  { key: "display_name", label: "Tiêu đề", sortable: true },
   { key: "partner_id", label: "Khách hàng", sortable: false },
   { key: "company_id", label: "Công ty", sortable: false },
   { key: "date_start", label: "Ngày theo kế hoạch", sortable: true },
@@ -340,7 +340,7 @@ function ProjectDashboard() {
       ) : (
         <>
           {viewMode === "list" ? (
-            <div className="table-responsive">
+            <div className="table-sticky-container">
               <table className="table table-bordered table-hover table-striped unified-table">
                 <thead className="table-header">
                   <tr>

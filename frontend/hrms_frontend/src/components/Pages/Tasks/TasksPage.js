@@ -283,7 +283,7 @@ function TasksPage() {
       ) : (
         <>
           {viewMode === "list" ? (
-            <div className="table-responsive">
+            <div className="table-sticky-container">
               <table className="table table-bordered table-hover table-striped unified-table project-task-table">
                 <thead className="table-header">
                   <tr>

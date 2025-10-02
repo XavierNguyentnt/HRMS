@@ -81,6 +81,7 @@
 .sidebar-link {
   display: flex;
   align-items: center;
+  justify-content: start;
   padding: 0.75rem;
   color: var(--text-secondary);
   border-radius: 6px;
@@ -106,7 +107,7 @@
   text-align: center;
   margin-right: 1rem;
   transition: margin 0.3s ease;
-  color: rgb(104, 76, 0);
+  color: rgb(65, 48, 1);
 }
 
 .sidebar-link-text {
