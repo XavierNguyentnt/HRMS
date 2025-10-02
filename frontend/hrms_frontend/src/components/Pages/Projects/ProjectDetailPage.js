@@ -38,36 +38,99 @@ import {
 // BƯỚC 1: ĐỊNH NGHĨA CÁC CỘT CHO BẢNG TASK
 const ALL_TASK_COLUMNS = [
   { key: "id", label: "ID", sortable: true },
-  { key: "name", label: "Tiêu đề", sortable: true },
-  { key: "milestone_id", label: "Mốc thời gian", sortable: true },
-  { key: "partner_id", label: "Khách hàng", sortable: true },
-  { key: "parent_id", label: "Nhiệm vụ cha", sortable: true },
-  { key: "user_ids", label: "Người được phân công", sortable: false },
-  { key: "allocated_hours", label: "Thời gian phân bổ", sortable: true },
-  { key: "effective_hours", label: "Thời gian đã dùng", sortable: true },
+  { key: "name", label: "Tiêu đề", sortable: true, className: "col-name" },
+  {
+    key: "milestone_id",
+    label: "Mốc thời gian",
+    sortable: true,
+    className: "col-milestone",
+  },
+  {
+    key: "partner_id",
+    label: "Khách hàng",
+    sortable: true,
+    className: "col-customer",
+  },
+  {
+    key: "parent_id",
+    label: "Nhiệm vụ cha",
+    sortable: true,
+    className: "col-name",
+  },
+  {
+    key: "user_ids",
+    label: "Người được phân công",
+    sortable: false,
+    className: "col-name",
+  },
+  {
+    key: "allocated_hours",
+    label: "Thời gian phân bổ",
+    sortable: true,
+    className: "col-hours",
+  },
+  {
+    key: "effective_hours",
+    label: "Thời gian đã dùng",
+    sortable: true,
+    className: "col-hours",
+  },
   {
     key: "subtask_effective_hours",
     label: "TG dùng cho NV phụ",
     sortable: true,
+    className: "col-hours",
   },
-  { key: "total_hours_spent", label: "Tổng TG đã dùng", sortable: true },
-  { key: "remaining_hours", label: "Thời gian còn lại", sortable: true },
-  { key: "progress", label: "Tiến độ", sortable: true },
-  { key: "date_deadline", label: "Thời hạn", sortable: true },
+  {
+    key: "total_hours_spent",
+    label: "Tổng TG đã dùng",
+    sortable: true,
+    className: "col-hours",
+  },
+  {
+    key: "remaining_hours",
+    label: "Thời gian còn lại",
+    sortable: true,
+    className: "col-hours",
+  },
+  {
+    key: "progress",
+    label: "Tiến độ",
+    sortable: true,
+    className: "col-progress",
+  },
+  {
+    key: "date_deadline",
+    label: "Thời hạn",
+    sortable: true,
+    className: "col-date",
+  },
   {
     key: "my_activity_date_deadline",
     label: "Thời hạn của tôi",
     sortable: true,
+    className: "col-date",
   },
-  { key: "rating_last_text", label: "Đánh giá", sortable: true },
-  { key: "tag_ids", label: "Thẻ", sortable: false },
+  {
+    key: "rating_last_text",
+    label: "Đánh giá",
+    sortable: true,
+    className: "col-vote",
+  },
+  { key: "tag_ids", label: "Thẻ", sortable: false, className: "col-tags" },
   {
     key: "date_last_stage_update",
     label: "Cập nhật giai đoạn",
     sortable: true,
+    className: "col-date",
   },
   { key: "stage_id", label: "Giai đoạn", sortable: true },
-  { key: "personal_stage_type_id", label: "Giai đoạn cá nhân", sortable: true },
+  {
+    key: "personal_stage_type_id",
+    label: "Giai đoạn cá nhân",
+    sortable: true,
+    className: "col-status",
+  },
 ];
 function ProjectDetailPage() {
   const { user, role } = useAuth();
@@ -347,6 +410,7 @@ function ProjectDetailPage() {
                     {orderedVisibleColumns.map((col) => (
                       <th
                         key={col.key}
+                        className={col.className}
                         onClick={() => col.sortable && handleSort(col.key)}
                         style={{
                           cursor: col.sortable ? "pointer" : "default",

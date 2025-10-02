@@ -86,7 +86,9 @@ const TaskListItem = ({
     // THAY ĐỔI: Thêm onClick vào cả dòng và style con trỏ
     <tr onClick={() => onNavigate(task.id)} style={{ cursor: "pointer" }}>
       {visibleColumns.map((col) => (
-        <td key={col.key}>{renderCell(col.key)}</td>
+        <td key={col.key} className={col.className}>
+          {renderCell(col.key)}
+        </td>
       ))}
       {/* QUAN TRỌNG: Thêm e.stopPropagation() để không bị điều hướng khi click vào nút */}
       <td className="col-action" onClick={(e) => e.stopPropagation()}>

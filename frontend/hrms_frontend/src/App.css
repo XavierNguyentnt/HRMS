@@ -145,31 +145,37 @@ h1 {
 
 /* Định nghĩa chiều rộng tối thiểu cho từng cột */
 .unified-table .col-name {
-  min-width: 500px;
+  min-width: 200px;
 }
 .unified-table .col-customer {
-  min-width: 500px;
+  min-width: 200px;
 }
 .unified-table .col-company {
-  min-width: 600px;
+  min-width: 200px;
 }
 .unified-table .col-date {
-  min-width: 200px;
+  min-width: 180px;
 }
 .unified-table .col-progress {
-  min-width: 600px;
-}
-.unified-table .col-manager {
-  min-width: 600px;
-}
-.unified-table .col-tags {
   min-width: 200px;
 }
+.unified-table .col-manager {
+  min-width: 200px;
+}
+.unified-table .col-tags {
+  min-width: 150px;
+}
 .unified-table .col-status {
-  min-width: 600px;
+  min-width: 200px;
+}
+.unified-table .col-milestone {
+  min-width: 200px;
+}
+.unified-table .col-vote {
+  min-width: 100px;
 }
 .unified-table .col-hours {
-  min-width: 130px;
+  min-width: 120px;
 }
 .unified-table .col-action {
   min-width: 120px;
