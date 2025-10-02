@@ -1,3 +1,4 @@
+// src/components/Layout/Header.js
 import React from "react";
 import { Navbar, Container, Nav, NavDropdown, Image } from "react-bootstrap";
 import { Link, useNavigate } from "react-router-dom";
@@ -9,7 +10,6 @@ import Avatar from "../shared/Avatar";
 
 const Header = () => {
   const { user, handleLogout } = useAuth();
-
   const navigate = useNavigate();
 
   const onLogout = () => {
@@ -17,13 +17,10 @@ const Header = () => {
     navigate("/login");
   };
 
-  let userPartnerId = null;
-  if (user && user.partner_id) {
-    // Kiểm tra xem partner_id là mảng [id, name] hay chỉ là một số id
-    userPartnerId = Array.isArray(user.partner_id)
-      ? user.partner_id[0]
-      : user.partner_id;
-  }
+  // Logic xây dựng src cho Avatar
+  const avatarSrc = user?.image_1920
+    ? `data:image/jpeg;base64,${user.image_1920}`
+    : null; // Nếu không có ảnh, Avatar component sẽ tự dùng ảnh mặc định
 
   return (
     <Navbar className="app-header" sticky="top">
@@ -55,7 +52,7 @@ const Header = () => {
             <NavDropdown
               title={
                 <Avatar
-                  partnerId={userPartnerId}
+                  src={avatarSrc}
                   altText={user.name}
                   size={40} // Kích thước phù hợp cho header
                   className="header-avatar"

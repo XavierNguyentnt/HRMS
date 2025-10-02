@@ -1,7 +1,24 @@
+//src\services\api\hrAPI.js
 import axiosInstance from "../../util/axios_instance";
 import URL from "../../util/url";
 
-const PROFILE_FIELDS = [
+// Các trường mà mọi nhân viên đều xem được (public profile)
+const PUBLIC_EMPLOYEE_FIELDS = [
+  "id",
+  "name",
+  "job_title",
+  "department_id",
+  "work_email",
+  "work_phone",
+  "mobile_phone", // số di động công việc
+  "work_location_id", // địa chỉ nơi làm việc
+  "parent_id", // người quản lý
+  "coach_id", // người hướng dẫn
+  "image_128",
+];
+
+// Các trường đầy đủ (HR Manager mới xem được)
+const FULL_EMPLOYEE_FIELDS = [
   "name",
   "job_title",
   "mobile_phone",
@@ -57,7 +74,7 @@ export const fetchUsers = async () => {
     method: "search_read",
     args: [[["share", "=", false]]], // chỉ lấy user nội bộ, loại bỏ portal
     kwargs: {
-      fields: ["id", "name", "login", "partner_id"],
+      fields: ["id", "name", "login", "partner_id", "image_128"],
       order: "name asc",
     },
   };
@@ -71,79 +88,88 @@ export const fetchUsers = async () => {
 
 /**
  * Lấy thông tin chi tiết của nhân viên (employee profile) từ user_id.
- * @param {number} userId - ID của user (res.users)
- * @returns {Promise<object>} - Dữ liệu chi tiết của nhân viên (hr.employee)
+ * - HR Manager: FULL_EMPLOYEE_FIELDS
+ * - Chính mình: FULL_EMPLOYEE_FIELDS
+ * - Người khác: PUBLIC_EMPLOYEE_FIELDS
  */
-export const fetchUserProfile = async (userId) => {
+// Helper chọn fields dựa trên quyền & đối tượng
+const getSelectedFields = (isSelf, isManager) => {
+  if (isManager || isSelf) return FULL_EMPLOYEE_FIELDS;
+  return PUBLIC_EMPLOYEE_FIELDS;
+};
+
+/**
+ * Lấy thông tin chi tiết của nhân viên (employee profile) từ user_id.
+ */
+export const fetchUserProfile = async (
+  userId,
+  currentUserId,
+  isManager = false
+) => {
+  const isSelf = userId === currentUserId;
+  const selectedFields = getSelectedFields(isSelf, isManager);
+
   const params = {
     model: "hr.employee",
     method: "search_read",
-    args: [[["user_id", "=", userId]]], // Domain để tìm nhân viên liên kết với user
+    args: [[["user_id", "=", userId]]],
     kwargs: {
-      fields: PROFILE_FIELDS,
+      fields: selectedFields,
       limit: 1,
+      context: { lang: "vi_VN" },
     },
   };
+
   try {
     const response = await axiosInstance.post(URL.RPC_CALL, {
       jsonrpc: "2.0",
       params,
     });
+
     if (response.data.error) {
       throw new Error(
         response.data.error.data.message || "Không thể tải thông tin hồ sơ."
       );
     }
-    if (response.data.result && response.data.result.length > 0) {
-      return response.data.result[0]; // Trả về đối tượng nhân viên đầu tiên tìm thấy
-    }
-    console.warn(
-      "Không tìm thấy hồ sơ nhân viên (hr.employee) cho người dùng này."
-    );
-    return {}; // Trả về object rỗng nếu không có
+
+    return response.data.result?.[0] || {};
   } catch (error) {
-    if (error.response?.data?.error) {
-      throw new Error(error.response.data.error.data.message);
-    }
     throw new Error(error.message || "Lỗi khi tải hồ sơ người dùng.");
   }
 };
 
 /**
- * HÀM MỚI: Lấy thông tin chi tiết của một nhân viên bằng ID của chính nhân viên đó (hr.employee).
- * Hiệu quả hơn search_read khi đã biết ID.
- * @param {number} employeeId - ID của nhân viên (hr.employee)
- * @returns {Promise<object>} - Dữ liệu chi tiết của nhân viên.
+ * Lấy thông tin chi tiết của một nhân viên bằng ID của nhân viên (hr.employee).
  */
-export const fetchEmployeeById = async (employeeId) => {
+export const fetchEmployeeById = async (
+  employeeId,
+  currentEmployeeId,
+  isManager = false
+) => {
+  const isSelf = employeeId === currentEmployeeId;
+  const selectedFields = getSelectedFields(isSelf, isManager);
+
   const params = {
     model: "hr.employee",
-    method: "read", // Sử dụng 'read' để lấy trực tiếp từ ID
-    args: [
-      [employeeId], // Odoo 'read' cần một mảng chứa các ID
-      PROFILE_FIELDS, // Tái sử dụng danh sách các trường đã định nghĩa
-    ],
+    method: "read",
+    args: [[employeeId], selectedFields],
     kwargs: { context: { lang: "vi_VN" } },
   };
+
   try {
     const response = await axiosInstance.post(URL.RPC_CALL, {
       jsonrpc: "2.0",
       params,
     });
+
     if (response.data.error) {
       throw new Error(
         response.data.error.data.message || "Không thể tải thông tin nhân viên."
       );
     }
-    // 'read' trả về một mảng các record, ta chỉ cần record đầu tiên
-    if (response.data.result && response.data.result.length > 0) {
-      return response.data.result[0];
-    }
-    throw new Error("Không tìm thấy nhân viên với ID đã cho.");
+
+    return response.data.result?.[0] || {};
   } catch (error) {
-    if (error.response?.data?.error) {
-      throw new Error(error.response.data.error.data.message);
-    }
     throw new Error(error.message || "Lỗi khi tải hồ sơ nhân viên.");
   }
 };
@@ -506,38 +532,41 @@ export const fetchDepartments = async () => {
 
 /**
  * Lấy danh sách nhân viên với các tùy chọn linh hoạt.
- * @param {Array} domain - Mảng điều kiện lọc của Odoo, vd: [['department_id', '=', 1]]
- * @param {Array} fields - Mảng các trường cần lấy, vd: ['name', 'job_title']
+ * - Employee thường chỉ được xem BASIC_EMPLOYEE_FIELDS
+ * - HR Manager/Officer được xem FULL_EMPLOYEE_FIELDS
+ *
+ * @param {Array} domain - Mảng điều kiện lọc của Odoo
+ * @param {Array} fields - Các trường custom (ưu tiên hơn)
  * @param {number} limit - Số lượng bản ghi tối đa
  * @param {number} offset - Vị trí bắt đầu lấy
+ * @param {boolean} isManager - true nếu user có quyền HR Manager/Officer
  */
 export const fetchEmployees = async ({
   domain = [],
   fields = [],
   limit = 80,
   offset = 0,
+  isManager = false,
 }) => {
+  const selectedFields =
+    fields.length > 0
+      ? fields
+      : isManager
+      ? FULL_EMPLOYEE_FIELDS
+      : PUBLIC_EMPLOYEE_FIELDS; // <-- dùng public thay vì basic
+
   const params = {
     model: "hr.employee",
     method: "search_read",
     args: [domain],
     kwargs: {
-      fields:
-        fields.length > 0
-          ? fields
-          : [
-              "id",
-              "name",
-              "job_title",
-              "work_email",
-              "work_phone",
-              "image_128",
-            ],
+      fields: selectedFields,
       limit,
       offset,
       context: { lang: "vi_VN" },
     },
   };
+
   const response = await axiosInstance.post(URL.RPC_CALL, {
     jsonrpc: "2.0",
     params,

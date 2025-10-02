@@ -1,72 +1,37 @@
-import React, { useState, useEffect } from "react";
-import { fetchBase64Image, fetchUserByPartnerId } from "../../services/api";
+// src/components/shared/Avatar.js
+import React from "react";
 import defaultAvatar from "../../assets/images/default-avatar.png";
 
-/**
- * Component Avatar linh hoạt...
- * @param {object} props
- * @param {string} [props.src] - Nguồn ảnh trực tiếp (ưu tiên cao nhất). Có thể là base64 string.
- * @param {number} props.partnerId - ID của res.partner để tìm avatar (nếu không có src).
- * @param {string} [props.altText='Avatar'] - Văn bản thay thế cho ảnh.
- * @param {string} [props.className=''] - Class CSS tùy chỉnh.
- * @param {number} [props.size=40] - Kích thước avatar.
- */
 const Avatar = ({
-  src, // <-- PROPS MỚI
-  partnerId,
+  src,
   altText = "Avatar",
-  className = "",
   size = 40,
+  style = {},
+  ...props
 }) => {
-  // Ưu tiên src, nếu không có thì dùng ảnh mặc định
-  const [avatarSrc, setAvatarSrc] = useState(src || defaultAvatar);
-
-  useEffect(() => {
-    // NẾU CÓ `src` ĐƯỢC TRUYỀN VÀO, SỬ DỤNG NÓ VÀ BỎ QUA LOGIC FETCH
-    if (src) {
-      setAvatarSrc(src);
-      return;
+  const handleError = (e) => {
+    if (e.target.src !== defaultAvatar) {
+      e.target.onerror = null;
+      e.target.src = defaultAvatar;
     }
+  };
 
-    // NẾU KHÔNG CÓ `src` VÀ KHÔNG CÓ `partnerId`, DÙNG ẢNH MẶC ĐỊNH
-    if (!partnerId) {
-      setAvatarSrc(defaultAvatar);
-      return;
-    }
-
-    // LOGIC FETCH CŨ, CHỈ CHẠY KHI KHÔNG CÓ `src` VÀ CÓ `partnerId`
-    const loadAvatar = async () => {
-      setAvatarSrc(defaultAvatar); // Reset trước khi fetch
-      const partnerImageUrl = `/image/res.partner/${partnerId}/avatar_128`;
-      let imageData = await fetchBase64Image(partnerImageUrl);
-
-      if (!imageData) {
-        const user = await fetchUserByPartnerId(partnerId);
-        if (user && user.image_128) {
-          imageData = `data:image/png;base64,${user.image_128}`;
-        }
-      }
-
-      if (imageData) {
-        setAvatarSrc(imageData);
-      }
-    };
-
-    loadAvatar();
-  }, [src, partnerId]); // Chạy lại khi src hoặc partnerId thay đổi
+  const mergedStyle = {
+    width: `${size}px`,
+    height: `${size}px`,
+    objectFit: "cover",
+    borderRadius: "50%",
+    display: "inline-block",
+    ...style, // merge style từ props, cho phép border, margin, ...
+  };
 
   return (
     <img
-      src={avatarSrc}
+      src={src || defaultAvatar}
       alt={altText}
-      className={`avatar ${className}`}
-      style={{
-        width: `${size}px`,
-        height: `${size}px`,
-        objectFit: "cover",
-        borderRadius: "50%",
-      }}
-      onError={() => setAvatarSrc(defaultAvatar)}
+      style={mergedStyle}
+      onError={handleError}
+      {...props}
     />
   );
 };

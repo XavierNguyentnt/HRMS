@@ -490,3 +490,19 @@ h1 {
   font-size: 2rem;
   opacity: 0.3;
 }
+
+/*AVATAR*/
+.avatar {
+  /* Đảm bảo ảnh không bao giờ tràn ra khỏi container của nó */
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Tùy chỉnh riêng cho avatar trên trang Profile để nó không quá lớn */
+.profile-main-avatar {
+  max-width: 150px; /* Giới hạn chiều rộng tối đa */
+  max-height: 150px; /* Giới hạn chiều cao tối đa */
+  margin-left: auto;
+  margin-right: auto;
+}

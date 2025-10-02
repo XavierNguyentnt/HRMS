@@ -1,3 +1,4 @@
+//frontend\hrms_frontend\src\components\Pages\Employee\EmployeesPage.js
 import React, { useState, useEffect } from "react";
 import {
   Container,
@@ -11,11 +12,14 @@ import {
 } from "react-bootstrap";
 import { useSearchParams, Link } from "react-router-dom"; // MỚI: Thêm Link
 import * as odooApi from "../../../services/api";
+import { useAuth, ROLES } from "../../../contexts/AuthContext";
 import Avatar from "../../shared/Avatar";
 
 const PAGE_SIZE = 20; // Mỗi lần tải 20 nhân viên
 
 function EmployeesPage() {
+  const { role } = useAuth();
+  const isManager = role === ROLES.ADMIN || role === ROLES.MANAGER;
   const [employees, setEmployees] = useState([]);
   const [isLoading, setIsLoading] = useState(true); // Dùng cho lần tải đầu tiên
   const [isPageLoading, setIsPageLoading] = useState(false); // Dùng cho các lần "Tải thêm"
@@ -60,6 +64,7 @@ function EmployeesPage() {
           domain,
           limit: PAGE_SIZE,
           offset: (page - 1) * PAGE_SIZE,
+          isManager,
         });
 
         // SỬA LỖI QUAN TRỌNG NHẤT:
@@ -81,7 +86,7 @@ function EmployeesPage() {
     // Áp dụng debounce cho việc tìm kiếm
     const timerId = setTimeout(loadEmployees, searchTerm ? 500 : 0);
     return () => clearTimeout(timerId);
-  }, [page, searchTerm, deptId, hasMore]); // Phụ thuộc vào các giá trị này để tải lại
+  }, [page, searchTerm, deptId, hasMore, isManager]);
 
   const handleLoadMore = () => {
     if (!isPageLoading) {
@@ -128,8 +133,8 @@ function EmployeesPage() {
                           : null
                       }
                       altText={emp.name}
-                      size={90}
-                      className="mb-3"
+                      size={100}
+                      className="mb-3 avatar"
                       style={{ border: "3px solid #eee" }}
                     />
                     <Card.Title as="h6" className="fw-bold text-dark">
