@@ -12,6 +12,8 @@ services:
       - ./backend/custom_addons:/mnt/extra-addons
       - ./backend/odoo.conf:/etc/odoo/odoo.conf:ro
     command: ["--config=/etc/odoo/odoo.conf", "--db-filter=^kdpd_db$"]
+    networks: # Thêm service vào mạng chung
+      - kdpd-network
 
   db:
     image: postgres:16
@@ -24,6 +26,8 @@ services:
       - POSTGRES_DB=postgres
     volumes:
       - db-data:/var/lib/postgresql/data
+    networks: # Thêm service vào mạng chung
+      - kdpd-network
 
   adminer:
     image: adminer
@@ -33,12 +37,15 @@ services:
       - "8080:8080"
     depends_on:
       - db
+    networks: # Thêm service vào mạng chung
+      - kdpd-network
 
   nginx:
     image: nginx:latest
     container_name: nginx_proxy
     depends_on:
       - odoo
+      - bff-api # Thêm phụ thuộc vào BFF API
     ports:
       - "80:80" # Redirect sang HTTPS
       # - "443:443" # HTTPS cho cả frontend + backend
@@ -48,7 +55,61 @@ services:
       - ./frontend/hrms_frontend/build:/usr/share/nginx/html:ro
       # - ./ssl:/etc/nginx/ssl:ro
     restart: always
+    networks: # Thêm service vào mạng chung
+      - kdpd-network
+    # =========================================================
+  # ======= DỊCH VỤ MỚI: API TRUNG GIAN (BFF) CHO AI =======
+  # =========================================================
+  bff-api:
+    container_name: bff_api
+    build:
+      context: ./bff # Trỏ đến thư mục chứa Dockerfile của API
+    ports:
+      - "8001:8000" # Map cổng 8000 của container ra 8001 của máy ảo
+    volumes:
+      - ./bff:/app # Mount code để live-reload khi code thay đổi
+    environment:
+      - ODOO_URL=http://odoo:8069
+      - ODOO_DB=kdpd_db
+      - ODOO_USER=admin # Thay bằng user Odoo của bạn
+      - ODOO_PASSWORD=admin # Thay bằng password Odoo của bạn
+      - OLLAMA_HOST=http://ollama:11434
+    depends_on:
+      - odoo
+      - ollama
+    networks: # Thêm service vào mạng chung
+      - kdpd-network
+    restart: unless-stopped
 
+  # =========================================================
+  # ========= DỊCH VỤ MỚI: OLLAMA AI SERVICE ================
+  # =========================================================
+  ollama:
+    container_name: ollama_service
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    networks: # Thêm service vào mạng chung
+      - kdpd-network
+    restart: unless-stopped
+    # TÙY CHỌN: Nếu máy ảo có GPU, hãy bỏ comment phần deploy này
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+# Định nghĩa các volumes được sử dụng
 volumes:
   odoo-data:
   db-data:
+  ollama-data: # Volume mới để lưu trữ các model AI
+
+# Định nghĩa mạng chung cho các services
+networks:
+  kdpd-network:
+    driver: bridge
