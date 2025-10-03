@@ -30,9 +30,13 @@ import {
   FaSearch,
   FaList,
   FaTh,
-  FaAngleDown, // THÊM MỚI
-  FaAngleRight, // THÊM MỚI
+  FaAngleDown,
+  FaAngleRight,
+  FaBrain,
 } from "react-icons/fa";
+
+import { AIAnalysisDisplay } from "../../AI_agent/AIAnalysisDisplay";
+import { useProjectAnalysis } from "../../hooks/useProjectAnalysis";
 
 const ALL_COLUMNS = [
   // ... giữ nguyên
@@ -109,6 +113,12 @@ function ProjectDashboard() {
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const navigate = useNavigate();
+  const {
+    analysis,
+    isLoading: isAIloading,
+    error: aiError,
+    analyzeProjects,
+  } = useProjectAnalysis();
 
   // THÊM MỚI: State để quản lý nhóm và trạng thái thu gọn
   const [groupedProjects, setGroupedProjects] = useState({});
@@ -310,12 +320,26 @@ function ProjectDashboard() {
     visibleColumns.includes(c.key)
   );
 
+  // THÊM MỚI: Hàm xử lý khi nhấn nút phân tích AI
+  const handleAnalyzeClick = () => {
+    // Lấy ID của tất cả các dự án đang được hiển thị
+    const projectIds = projects.map((p) => p.id);
+    analyzeProjects(projectIds);
+  };
+
   return (
     <Container fluid className="py-4">
-      {/* ... Phần header, controls ... giữ nguyên ... */}
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h1>Dashboard Quản lý hợp phần</h1>
         <div className="d-flex gap-2">
+          {/* THÊM MỚI: Nút phân tích AI */}
+          <Button
+            variant="outline-primary"
+            onClick={handleAnalyzeClick}
+            disabled={isAIloading}>
+            <FaBrain className="me-2" />
+            {isAIloading ? "Đang phân tích..." : "Phân tích tổng thể"}
+          </Button>
           <Button variant="primary" onClick={handleOpenCreateModal}>
             <i className="fa fa-plus me-2"></i> Tạo dự án mới
           </Button>
@@ -363,6 +387,15 @@ function ProjectDashboard() {
           </Col>
         </Row>
       </div>
+      {(isAIloading || aiError || analysis) && (
+        <div className="p-3 mb-3 bg-light border rounded">
+          <AIAnalysisDisplay
+            analysis={analysis}
+            isLoading={isAIloading}
+            error={aiError}
+          />
+        </div>
+      )}
       <div className="d-flex justify-content-end align-items-center mb-3">
         <ButtonGroup className="me-2">
           <Button

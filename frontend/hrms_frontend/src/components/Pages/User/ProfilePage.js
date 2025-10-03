@@ -33,6 +33,9 @@ function ProfilePage() {
     updateError,
   } = useAuth();
 
+  // Define isManager based on the user's role
+  const isManager = role === ROLES.MANAGER;
+
   //---State chỉnh sửa kỹ năng ---
   const [profileData, setProfileData] = useState(null);
   const [originalProfileData, setOriginalProfileData] = useState(null);
@@ -136,6 +139,10 @@ function ProfilePage() {
   };
 
   // === Dữ liệu và logic ===
+  // Define if the profile is the user's own profile
+  const isOwnProfile =
+    !employeeId || (user && user.id === parseInt(employeeId, 10));
+
   const forceUpdateData = useCallback(async () => {
     // Nếu là trang của chính mình, dùng handleUpdateProfile để refresh toàn cục
     if (!employeeId && user) {
@@ -148,7 +155,9 @@ function ProfilePage() {
       try {
         setIsLoading(true);
         const freshData = await odooApi.fetchEmployeeById(
-          parseInt(employeeId, 10)
+          parseInt(employeeId, 10),
+          isOwnProfile,
+          isManager
         );
         const formattedData = {
           ...freshData,
@@ -165,7 +174,7 @@ function ProfilePage() {
         setIsLoading(false);
       }
     }
-  }, [employeeId, user, handleUpdateProfile]);
+  }, [employeeId, user, handleUpdateProfile, isManager, isOwnProfile]);
 
   useEffect(() => {
     const loadDropdowns = async () => {
@@ -189,9 +198,17 @@ function ProfilePage() {
       try {
         let data;
         if (employeeId) {
-          data = await odooApi.fetchEmployeeById(parseInt(employeeId, 10));
+          data = await odooApi.fetchEmployeeById(
+            parseInt(employeeId, 10),
+            isOwnProfile,
+            isManager
+          );
         } else if (user) {
-          data = user;
+          data = await odooApi.fetchUserProfile(
+            user.id,
+            true, // isSelf
+            isManager
+          );
         } else {
           throw new Error("Không thể xác định hồ sơ để hiển thị.");
         }
@@ -238,7 +255,7 @@ function ProfilePage() {
       }
     };
     loadData();
-  }, [employeeId, user]);
+  }, [employeeId, isManager, isOwnProfile, user]);
 
   // === Xử lý cho Modal Thêm Kỹ năng ===
   const handleShowSkillModal = async () => {
@@ -427,7 +444,12 @@ function ProfilePage() {
         await odooApi.updateProfile(targetEmployeeId, changedData);
 
         // Tải lại dữ liệu mới cho trang
-        const freshData = await odooApi.fetchEmployeeById(targetEmployeeId);
+        const freshData = await odooApi.fetchEmployeeById(
+          targetEmployeeId,
+          isOwnProfile,
+          isManager
+        );
+
         const formattedData = {
           ...freshData,
           country_id: freshData.country_id ? freshData.country_id[0] : "",
@@ -483,9 +505,6 @@ function ProfilePage() {
   // const hasEditPermission = true;
   // const hasEditPermission = !isViewOnly;
   // THAY ĐỔI 2: VIẾT LẠI LOGIC XÁC ĐỊNH QUYỀN
-  const isOwnProfile =
-    !employeeId || (user && user.id === parseInt(employeeId, 10));
-
   // Quyền chỉnh sửa: Cho phép nếu là profile của chính mình HOẶC người xem là Admin.
   const hasEditPermission = isOwnProfile || role === ROLES.ADMIN;
 

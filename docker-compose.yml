@@ -74,6 +74,7 @@ services:
       - ODOO_USER=admin # Thay bằng user Odoo của bạn
       - ODOO_PASSWORD=admin # Thay bằng password Odoo của bạn
       - OLLAMA_HOST=http://ollama:11434
+      - OLLAMA_MODEL=mistral:7b-instruct-q4_K_M
     depends_on:
       - odoo
       - ollama

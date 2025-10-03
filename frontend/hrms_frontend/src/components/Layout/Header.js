@@ -18,8 +18,8 @@ const Header = () => {
   };
 
   // Logic xây dựng src cho Avatar
-  const avatarSrc = user?.image_1920
-    ? `data:image/jpeg;base64,${user.image_1920}`
+  const avatarSrc = user?.image_128
+    ? `data:image/jpeg;base64,${user.image_128}`
     : null; // Nếu không có ảnh, Avatar component sẽ tự dùng ảnh mặc định
 
   return (

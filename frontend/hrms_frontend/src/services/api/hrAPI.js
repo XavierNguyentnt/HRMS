@@ -14,6 +14,7 @@ const PUBLIC_EMPLOYEE_FIELDS = [
   "work_location_id", // địa chỉ nơi làm việc
   "parent_id", // người quản lý
   "coach_id", // người hướng dẫn
+  "image_1920",
   "image_128",
 ];
 
