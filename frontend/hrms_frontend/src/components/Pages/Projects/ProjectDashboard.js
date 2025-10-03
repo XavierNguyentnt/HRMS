@@ -36,17 +36,67 @@ import {
 
 const ALL_COLUMNS = [
   // ... giữ nguyên
-  { key: "display_name", label: "Tiêu đề", sortable: true },
-  { key: "partner_id", label: "Khách hàng", sortable: false },
-  { key: "company_id", label: "Công ty", sortable: false },
-  { key: "date_start", label: "Ngày theo kế hoạch", sortable: true },
-  { key: "milestone_progress", label: "Tiến độ Milestones", sortable: true },
-  { key: "user_id", label: "Trưởng dự án", sortable: true },
-  { key: "tags", label: "Thẻ", sortable: false },
-  { key: "stage_id", label: "Trạng thái", sortable: true },
-  { key: "allocated_hours", label: "Thời gian phân bổ", sortable: true },
-  { key: "effective_hours", label: "Thời gian đã dùng", sortable: true },
-  { key: "remaining_hours", label: "Thời gian còn lại", sortable: true },
+  {
+    key: "display_name",
+    label: "Tiêu đề",
+    sortable: true,
+    className: "col-name",
+  },
+  {
+    key: "partner_id",
+    label: "Khách hàng",
+    sortable: false,
+    className: "col-customer",
+  },
+  {
+    key: "company_id",
+    label: "Công ty",
+    sortable: false,
+    className: "col-company",
+  },
+  {
+    key: "date_start",
+    label: "Ngày theo kế hoạch",
+    sortable: true,
+    className: "col-date",
+  },
+  {
+    key: "milestone_progress",
+    label: "Tiến độ Milestones",
+    sortable: true,
+    className: "col-progress",
+  },
+  {
+    key: "user_id",
+    label: "Trưởng dự án",
+    sortable: true,
+    className: "col-manager",
+  },
+  { key: "tags", label: "Thẻ", sortable: false, className: "col-tags" },
+  {
+    key: "stage_id",
+    label: "Trạng thái",
+    sortable: true,
+    className: "col-status",
+  },
+  {
+    key: "allocated_hours",
+    label: "Thời gian phân bổ",
+    sortable: true,
+    className: "col-hours",
+  },
+  {
+    key: "effective_hours",
+    label: "Thời gian đã dùng",
+    sortable: true,
+    className: "col-hours",
+  },
+  {
+    key: "remaining_hours",
+    label: "Thời gian còn lại",
+    sortable: true,
+    className: "col-hours",
+  },
 ];
 
 function ProjectDashboard() {
@@ -347,6 +397,7 @@ function ProjectDashboard() {
                     {orderedVisibleColumns.map((col) => (
                       <th
                         key={col.key}
+                        className={col.className}
                         onClick={() => col.sortable && handleSort(col.key)}
                         style={{
                           cursor: col.sortable ? "pointer" : "default",

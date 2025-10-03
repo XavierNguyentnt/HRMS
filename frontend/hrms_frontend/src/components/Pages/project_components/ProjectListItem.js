@@ -106,6 +106,7 @@ const ProjectListItem = ({
       {orderedVisibleColumns.map((col) => (
         <td
           key={col.key}
+          className={col.className}
           onClick={
             col.key === "display_name"
               ? () => onViewTasks(project.id)
