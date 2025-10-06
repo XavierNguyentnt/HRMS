@@ -1,0 +1,48 @@
+.ai-analysis-results h4 {
+  font-weight: 600;
+  color: #333;
+}
+.analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+}
+.analysis-card ul {
+  padding-left: 1.2rem;
+  margin-bottom: 0;
+}
+.analysis-card li {
+  margin-bottom: 0.5rem;
+}
+.analysis-card .card-header {
+  font-size: 1rem;
+  font-weight: 600;
+}
+.overdue .card-header {
+  background-color: #fff3cd;
+}
+.workload .card-header {
+  background-color: #d1ecf1;
+}
+.suggestions .card-header {
+  background-color: #d4edda;
+}
+.ai-loading,
+.ai-error,
+.ai-placeholder {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  border-radius: 0.25rem;
+}
+.ai-loading {
+  background-color: #e2e3e5;
+}
+.ai-error {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+.ai-placeholder {
+  background-color: #cce5ff;
+  color: #004085;
+}

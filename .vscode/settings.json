@@ -5,6 +5,7 @@
     "keepalive",
     "kwargs",
     "Odoo",
+    "odoorpc",
     "sendfile",
     "ssnid"
   ],
