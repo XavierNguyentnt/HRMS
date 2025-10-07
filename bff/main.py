@@ -63,7 +63,7 @@ class TaskStatusResponse(BaseModel):
 # =========================================================
 def get_odoo_client():
     if not all([ODOO_URL, ODOO_DB, ODOO_USER, ODOO_PASSWORD]):
-        logger.error("⚠️ Thiếu biến môi trường Odoo.")
+        logger.error("⚠️  Thiếu biến môi trường Odoo.")
         raise HTTPException(status_code=500, detail="Cấu hình Odoo phía server bị thiếu.")
     try:
         import odoorpc
@@ -76,9 +76,8 @@ def get_odoo_client():
         logger.info(f"✅ Đã kết nối thành công đến Odoo DB: {ODOO_DB}")
         yield odoo
     except Exception as e:
-        logger.error(f"❌ Lỗi trong quá trình kết nối hoặc tương tác với Odoo: {e}")
-        # [SỬA LỖI] Cung cấp thông báo lỗi chi tiết hơn
-        raise HTTPException(status_code=503, detail=f"Không thể kết nối hoặc xử lý dữ liệu từ Odoo: {e}")
+        logger.error(f"❌ Lỗi khi kết nối Odoo: {e}", exc_info=True)
+        raise HTTPException(status_code=503, detail=f"Không thể kết nối đến Odoo: {e}")
 
 # =========================================================
 # HÀM XỬ LÝ NỀN CHO TÁC VỤ PHÂN TÍCH
@@ -99,7 +98,7 @@ def run_ai_analysis_in_background(task_id: str, prompt: str):
         logger.info(f"✅ Tác vụ nền task_id={task_id} hoàn tất.")
     except Exception as e:
         error_message = f"Lỗi khi thực thi tác vụ nền task_id={task_id}: {e}"
-        logger.error(f"❌ {error_message}")
+        logger.error(f"❌ {error_message}", exc_info=True)
         analysis_results[task_id] = {"status": "failed", "result": {"error": error_message}}
 
 # =========================================================
@@ -192,24 +191,25 @@ async def analyze_multiple_projects(
     try:
         tasks_data_raw = odoo.env['project.task'].search_read(
             [('project_id', 'in', request.project_ids)],
-            # [SỬA LỖI] Thay 'user_id' bằng 'user_ids'
+            # [SỬA LỖI] Đọc trường 'user_ids' thay vì 'user_id'
             ['name', 'stage_id', 'user_ids', 'date_deadline', 'project_id']
         )
         if not tasks_data_raw:
             raise HTTPException(status_code=404, detail="Các dự án đã chọn không có công việc nào để phân tích.")
 
+        # Lấy danh sách ID của tất cả người dùng liên quan để truy vấn tên một lần
+        all_user_ids = {uid for t in tasks_data_raw for uid in t.get('user_ids', [])}
+        user_names = {u['id']: u['name'] for u in odoo.env['res.users'].browse(list(all_user_ids)).read(['name'])}
+
         tasks_data_processed = []
         for t in tasks_data_raw:
-            assignee_name = None
-            # [SỬA LỖI] Xử lý trường 'user_ids' là một danh sách
-            if t.get("user_ids"):
-                # Lấy tên của người được giao đầu tiên trong danh sách
-                assignee_name = odoo.env['res.users'].browse(t['user_ids'][0]).read(['name'])[0]['name']
+            # [SỬA LỖI] Xử lý trường 'user_ids' là một danh sách và lấy tên
+            assignee_names = [user_names.get(uid) for uid in t.get('user_ids', []) if user_names.get(uid)]
 
             tasks_data_processed.append({
                 "name": t.get("name"),
                 "stage": t.get("stage_id")[1] if t.get("stage_id") else None,
-                "assignee": assignee_name,
+                "assignees": ", ".join(assignee_names), # Nối tên nếu có nhiều người
                 "deadline": t.get("date_deadline"),
                 "project_name": t.get("project_id")[1] if t.get("project_id") else None,
             })
@@ -217,7 +217,6 @@ async def analyze_multiple_projects(
         tasks_json_for_prompt = json.dumps(tasks_data_processed, indent=2, default=str)
         current_date_str = datetime.now().strftime("%Y-%m-%d")
     except Exception as e:
-        # Bắt lỗi ở đây để trả về thông điệp rõ ràng hơn
         logger.error(f"Lỗi khi xử lý dữ liệu từ Odoo: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Lỗi khi xử lý dữ liệu từ Odoo: {e}")
 

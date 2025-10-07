@@ -37,23 +37,23 @@ const OverdueTasksDisplay = ({ data }) => {
 // [MỚI] COMPONENT CHUYÊN DỤNG ĐỂ HIỂN THỊ PHÂN BỔ NHÂN SỰ
 // ====================================================================
 const WorkloadDisplay = ({ data }) => {
-  if (!data || typeof data !== "object") {
-    return <p>{String(data)}</p>;
+  // `data` ở đây là `cross_project_workload`
+  // Kiểm tra xem data và data.tasks_per_project có tồn tại và là một mảng không
+  if (!data || !Array.isArray(data.tasks_per_project)) {
+    return <p>Không có dữ liệu phân bổ theo dự án.</p>;
   }
 
-  const { tasks_per_project } = data;
-
+  // Bây giờ chúng ta biết chắc chắn `data.tasks_per_project` là một mảng
   return (
     <ListGroup variant="flush">
       <ListGroup.Item>
         <strong>Phân bổ theo dự án:</strong>
       </ListGroup.Item>
-      {tasks_per_project &&
-        tasks_per_project.map((proj, index) => (
-          <ListGroup.Item key={index}>
-            - <strong>{proj.name}:</strong> {proj.count} nhiệm vụ
-          </ListGroup.Item>
-        ))}
+      {data.tasks_per_project.map((proj, index) => (
+        <ListGroup.Item key={index}>
+          - <strong>{proj.name}:</strong> {proj.count} nhiệm vụ
+        </ListGroup.Item>
+      ))}
     </ListGroup>
   );
 };
