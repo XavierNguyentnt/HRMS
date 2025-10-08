@@ -1,15 +1,20 @@
 {
     "name": "Document Flow Extension",
-    "summary": "Luồng xử lý văn bản kế thừa DMS",
+    "summary": "Luồng xử lý văn bản kế thừa từ DMS",
     "version": "18.0.1.0.0",
-    "author": "You",
-    "depends": ["dms", "mail", "hr"],
-    "data": [
-        "security/security.xml",
-        "security/ir.model.access.csv",
-        "views/menu.xml",
-        "views/document_views.xml",
-        "views/route_views.xml",
+    "author": "Your Company",
+    "website": "https://yourcompany.com",
+    "category": "Documents",
+    "license": "LGPL-3",
+    "depends": [
+        "dms", 
+        "mail",
     ],
+    "data": [
+        "views/menu.xml",
+        "views/document_flow_views.xml",
+        # thêm file security nếu có
+    ],
+    "installable": True,
     "application": True,
 }
