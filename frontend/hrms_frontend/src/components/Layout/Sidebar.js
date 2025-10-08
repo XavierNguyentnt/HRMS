@@ -140,6 +140,9 @@ const Sidebar = () => {
               <PersonFill className="sidebar-icon" />
               <span className="sidebar-link-text">Cá nhân</span>
             </Nav.Link>
+            <Nav.Link as={NavLink} to="/documents">
+              <i className="bi bi-folder2-open me-2"></i> Văn bản & Hồ sơ
+            </Nav.Link>
           </Nav.Item>
         </OverlayTrigger>
       </Nav>

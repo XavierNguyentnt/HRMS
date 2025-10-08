@@ -1,0 +1,11 @@
+<odoo>
+  <data>
+    <record id="group_document_flow_user" model="res.groups">
+      <field name="name">Document Flow User</field>
+    </record>
+    <record id="group_document_flow_manager" model="res.groups">
+      <field name="name">Document Flow Manager</field>
+      <field name="implied_ids" eval="[(4, ref('group_document_flow_user'))]"/>
+    </record>
+  </data>
+</odoo>

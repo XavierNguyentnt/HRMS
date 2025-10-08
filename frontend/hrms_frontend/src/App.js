@@ -23,6 +23,9 @@ import ProjectDetailPage from "./components/Pages/Projects/ProjectDetailPage";
 import TasksPage from "./components/Pages/Tasks/TasksPage";
 import TaskDetailPage from "./components/Pages/Tasks/TaskDetailPage";
 
+//DMS
+import DocumentsPage from "./components/Pages/dms/DocumentsPage";
+
 // =================================================================
 // Component Layout chính: Render Header và nội dung các trang con
 // =================================================================
@@ -86,6 +89,16 @@ function App() {
           />
           <Route path="tasks" element={<TasksPage />} />
         </Route>
+
+        {/*DMS*/}
+        <Route
+          path="documents"
+          element={
+            <PrivateRoute>
+              <DocumentsPage />
+            </PrivateRoute>
+          }
+        />
 
         {/* Admin routes */}
         <Route
