@@ -7,6 +7,7 @@ import App from "./App";
 import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { SidebarProvider } from "./contexts/SidebarContext"; // Import provider mới
+import { DateFormatProvider } from "./contexts/DateFormatContext";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
@@ -16,7 +17,9 @@ root.render(
         <SidebarProvider>
           {" "}
           {/* Bọc App trong SidebarProvider */}
-          <App />
+          <DateFormatProvider>
+            <App />
+          </DateFormatProvider>
         </SidebarProvider>
       </AuthProvider>
     </BrowserRouter>

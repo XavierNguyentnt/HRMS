@@ -1,23 +1,35 @@
+// src/components/Pages/DMS/DmsNewFileModal.js
 import React, { useState, useEffect } from "react";
 import { Modal, Button, Form, Row, Col, Spinner } from "react-bootstrap";
 import { createDocument } from "../../../services/api/dmsAPI";
 import axiosInstance from "../../../util/axios_instance";
 import URL from "../../../util/url";
 
+const humanFileSize = (bytes) => {
+  if (bytes < 1024) return `${bytes} B`;
+  else if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
+  else return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+};
+
 const DmsNewFileModal = ({ show, onHide, onSuccess }) => {
   const [directories, setDirectories] = useState([]);
   const [categories, setCategories] = useState([]);
   const [tags, setTags] = useState([]);
+  const [loading, setLoading] = useState(false);
+
   const [form, setForm] = useState({
     name: "",
     directory_id: "",
     category_id: "",
     tag_ids: [],
     file: null,
+    mimetype: "",
+    extension: "",
+    size: 0,
+    human_size: "",
   });
-  const [loading, setLoading] = useState(false);
 
-  // --- Load dữ liệu dropdown ---
+  // --- Load dropdowns ---
   useEffect(() => {
     if (show) {
       loadDirectories();
@@ -68,16 +80,26 @@ const DmsNewFileModal = ({ show, onHide, onSuccess }) => {
     setTags(res.data.result || []);
   };
 
-  // --- Xử lý upload ---
+  // --- Khi người dùng chọn file ---
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
+    const extension = file.name.split(".").pop().toLowerCase();
+    const mimetype = file.type || "application/octet-stream";
+    const size = file.size;
+    const human_size = humanFileSize(size);
+
     const fileName = file.name.replace(/\.[^/.]+$/, ""); // bỏ phần .ext
+
     setForm((prev) => ({
       ...prev,
       file,
-      name: prev.name || fileName, // chỉ auto-fill nếu chưa nhập
+      name: prev.name || fileName,
+      extension,
+      mimetype,
+      size,
+      human_size,
     }));
   };
 
@@ -98,8 +120,8 @@ const DmsNewFileModal = ({ show, onHide, onSuccess }) => {
           directory_id: parseInt(form.directory_id),
           category_id: form.category_id ? parseInt(form.category_id) : false,
           tag_ids: form.tag_ids.map((id) => parseInt(id)),
-          mimetype: form.file.type,
-          extension: form.file.name.split(".").pop(),
+          mimetype: form.mimetype,
+          extension: form.extension,
           base64Data,
         };
         await createDocument(payload);
@@ -134,7 +156,7 @@ const DmsNewFileModal = ({ show, onHide, onSuccess }) => {
             </Col>
             <Col md={6}>
               <Form.Group className="mb-3">
-                <Form.Label>Chọn thư mục</Form.Label>
+                <Form.Label>Thư mục</Form.Label>
                 <Form.Select
                   value={form.directory_id}
                   onChange={(e) =>
@@ -150,6 +172,7 @@ const DmsNewFileModal = ({ show, onHide, onSuccess }) => {
               </Form.Group>
             </Col>
           </Row>
+
           <Row>
             <Col md={6}>
               <Form.Group className="mb-3">
@@ -192,10 +215,33 @@ const DmsNewFileModal = ({ show, onHide, onSuccess }) => {
               </Form.Group>
             </Col>
           </Row>
-          <Form.Group>
+
+          <Form.Group className="mb-3">
             <Form.Label>Nội dung File</Form.Label>
             <Form.Control type="file" onChange={handleFileChange} />
           </Form.Group>
+
+          {/* Hiển thị thông tin file */}
+          {form.file && (
+            <div className="border rounded p-3 mt-3 bg-light">
+              <Row>
+                <Col md={6}>
+                  <strong>Định dạng:</strong> {form.extension || "—"}
+                </Col>
+                <Col md={6}>
+                  <strong>Kiểu MIME:</strong> {form.mimetype || "—"}
+                </Col>
+              </Row>
+              <Row className="mt-2">
+                <Col md={6}>
+                  <strong>Dung lượng:</strong> {form.human_size || "—"}
+                </Col>
+                <Col md={6}>
+                  <strong>Tên đầy đủ:</strong> {form.file?.name}
+                </Col>
+              </Row>
+            </div>
+          )}
         </Form>
       </Modal.Body>
       <Modal.Footer>

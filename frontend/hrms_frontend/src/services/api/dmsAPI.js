@@ -3,6 +3,26 @@ import axiosInstance from "../../util/axios_instance";
 import URL from "../../util/url";
 
 /**
+ * Tính dung lượng file từ base64
+ */
+const bytesLengthFromBase64 = (base64) => {
+  if (!base64) return 0;
+  let padding = 0;
+  if (base64.endsWith("==")) padding = 2;
+  else if (base64.endsWith("=")) padding = 1;
+  return (base64.length * 3) / 4 - padding;
+};
+
+/**
+ * Chuyển byte -> human-readable
+ */
+const humanFileSize = (bytes) => {
+  if (bytes < 1024) return `${bytes} B`;
+  else if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
+  else return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+};
+
+/**
  * Lấy danh sách văn bản (model: dms.file)
  */
 export const fetchDocuments = async (filters = [], limit = 100) => {
@@ -88,13 +108,8 @@ export const fetchDocumentDetail = async (id) => {
 };
 
 /**
- * 🆕 Tạo mới file DMS (upload thực tế qua ir.attachment)
- * @param {Object} fileData
- * @param {string} fileData.name - Tên file
- * @param {string} fileData.mimetype - Kiểu MIME
- * @param {string} fileData.base64Data - Nội dung file base64
- * @param {number} [fileData.directory_id] - ID thư mục đích (tuỳ chọn)
- * @param {number} [fileData.company_id] - ID công ty (tuỳ chọn)
+ * Tạo mới file DMS (upload qua ir.attachment)
+ * Trả về luôn size và human_size chính xác
  */
 export const createDocument = async (fileData) => {
   try {
@@ -118,10 +133,8 @@ export const createDocument = async (fileData) => {
       jsonrpc: "2.0",
       params: attachParams,
     });
-
     if (attachResponse.data.error)
       throw new Error(attachResponse.data.error.data.message);
-
     const attachmentId = attachResponse.data.result;
 
     // 2️⃣ Tạo dms.file và liên kết đến attachment vừa tạo
@@ -145,11 +158,26 @@ export const createDocument = async (fileData) => {
       jsonrpc: "2.0",
       params: fileParams,
     });
-
     if (fileResponse.data.error)
       throw new Error(fileResponse.data.error.data.message);
+    const fileId = fileResponse.data.result;
 
-    return fileResponse.data.result; // Trả về ID của bản ghi dms.file
+    // 3️⃣ Tính size & human_size từ base64
+    const sizeInBytes = bytesLengthFromBase64(fileData.base64Data);
+    const humanSize = humanFileSize(sizeInBytes);
+
+    return {
+      id: fileId,
+      name: fileData.name,
+      attachment_id: attachmentId,
+      directory_id: fileData.directory_id || false,
+      company_id: fileData.company_id || false,
+      mimetype: fileData.mimetype,
+      save_type: "database",
+      size: sizeInBytes,
+      human_size: humanSize,
+      access_url: `/my/dms/file/${fileId}/download`,
+    };
   } catch (error) {
     console.error("Lỗi khi tạo mới tài liệu:", error);
     throw new Error(error.message || "Không thể tạo tài liệu mới.");
