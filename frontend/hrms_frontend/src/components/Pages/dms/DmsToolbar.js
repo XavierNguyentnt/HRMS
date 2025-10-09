@@ -8,6 +8,9 @@ import {
   SlidersHorizontal,
   Calendar,
 } from "lucide-react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { vi } from "date-fns/locale";
 
 const DmsToolbar = ({
   onSearch,
@@ -19,8 +22,8 @@ const DmsToolbar = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState("create_date");
   const [sortOrder, setSortOrder] = useState("desc");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [dateFrom, setDateFrom] = useState(null);
+  const [dateTo, setDateTo] = useState(null);
 
   const handleSearch = (e) => {
     const val = e.target.value;
@@ -36,12 +39,19 @@ const DmsToolbar = ({
     onSortChange?.({ field, order });
   };
 
-  const handleDateChange = (type, val) => {
-    if (type === "from") setDateFrom(val);
-    if (type === "to") setDateTo(val);
+  const handleDateChange = (type, date) => {
+    if (type === "from") setDateFrom(date);
+    if (type === "to") setDateTo(date);
+
     onDateFilter?.({
-      from: type === "from" ? val : dateFrom,
-      to: type === "to" ? val : dateTo,
+      from:
+        type === "from"
+          ? date?.toISOString().split("T")[0]
+          : dateFrom?.toISOString()?.split("T")[0],
+      to:
+        type === "to"
+          ? date?.toISOString().split("T")[0]
+          : dateTo?.toISOString()?.split("T")[0],
     });
   };
 
@@ -83,22 +93,30 @@ const DmsToolbar = ({
 
       {/* 📅 Date Filter */}
       <div className="d-flex align-items-center gap-2">
+        <InputGroup.Text>
+          <Calendar size={16} />
+        </InputGroup.Text>
         <InputGroup size="sm">
-          <InputGroup.Text>
-            <Calendar size={16} />
-          </InputGroup.Text>
-          <Form.Control
-            type="date"
-            value={dateFrom}
-            onChange={(e) => handleDateChange("from", e.target.value)}
+          <DatePicker
+            selected={dateFrom}
+            onChange={(date) => handleDateChange("from", date)}
+            dateFormat="dd/MM/yyyy"
+            placeholderText="Từ ngày"
+            locale={vi}
+            className="form-control form-control-sm"
+            isClearable
           />
         </InputGroup>
         <span>→</span>
         <InputGroup size="sm">
-          <Form.Control
-            type="date"
-            value={dateTo}
-            onChange={(e) => handleDateChange("to", e.target.value)}
+          <DatePicker
+            selected={dateTo}
+            onChange={(date) => handleDateChange("to", date)}
+            dateFormat="dd/MM/yyyy"
+            placeholderText="Đến ngày"
+            locale={vi}
+            className="form-control form-control-sm"
+            isClearable
           />
         </InputGroup>
       </div>

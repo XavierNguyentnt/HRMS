@@ -45,6 +45,17 @@ h1 {
 
 /* Custom styles for Project components */
 
+/*DatePicker*/
+.react-datepicker-wrapper {
+  width: 150px;
+}
+
+.react-datepicker__input-container input {
+  font-size: 0.875rem;
+  text-align: center;
+  border-radius: 0.375rem;
+}
+
 /* Status bubble colors */
 .o_status_bubble {
   display: inline-block;
