@@ -1,4 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    
   <menuitem id="menu_document_flow_root" name="Luồng Văn bản" sequence="50" parent="dms.menu_dms_root"/>
-  <menuitem id="menu_document_flow_files" name="Văn bản nội bộ" parent="menu_document_flow_root" action="dms.action_dms_file"/>
+
+  <record id="action_document_flow_main" model="ir.actions.act_window">
+      <field name="name">Tất cả văn bản</field>
+      <field name="res_model">dms.file</field>
+      <field name="view_mode">kanban,tree,form</field>
+      <field name="view_id" ref="view_dms_file_kanban_custom"/>
+      <field name="help" type="html">
+        <p class="o_view_nocontent_smiling_face">
+          Chưa có văn bản nào. Hãy tạo mới!
+        </p>
+      </field>
+  </record>
+  
+  <menuitem 
+    id="menu_document_flow_all_documents"
+    name="Tất cả văn bản"
+    parent="menu_document_flow_root"
+    action="action_document_flow_main"
+    sequence="10"/>
+
 </odoo>

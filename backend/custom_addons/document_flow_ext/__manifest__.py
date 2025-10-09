@@ -11,10 +11,12 @@
         "mail",
     ],
     "data": [
+        "security/security.xml",
+        "security/ir.model.access.csv",
+        "views/document_views.xml",
+        "views/route_views.xml",
         "views/menu.xml",
-        "views/document_flow_views.xml",
-        # thêm file security nếu có
     ],
     "installable": True,
-    "application": True,
+    "application": False,
 }

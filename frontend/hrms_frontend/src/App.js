@@ -88,17 +88,16 @@ function App() {
             element={<TaskDetailPage />}
           />
           <Route path="tasks" element={<TasksPage />} />
+          {/*DMS*/}
+          <Route
+            path="documents"
+            element={
+              <PrivateRoute>
+                <DocumentsPage />
+              </PrivateRoute>
+            }
+          />
         </Route>
-
-        {/*DMS*/}
-        <Route
-          path="documents"
-          element={
-            <PrivateRoute>
-              <DocumentsPage />
-            </PrivateRoute>
-          }
-        />
 
         {/* Admin routes */}
         <Route
@@ -113,8 +112,9 @@ function App() {
 
         <Route
           path="*"
-          element={<Navigate to={user ? "/dashboard" : "/login"} />}
-        />
+          element={<Navigate to={user ? "/dashboard" : "/login"} />}>
+          {" "}
+        </Route>
       </Routes>
     </div>
   );

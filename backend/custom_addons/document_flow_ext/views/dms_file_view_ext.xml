@@ -1,0 +1,15 @@
+<odoo>
+  <record id="view_dms_file_tree_inherit_flow" model="ir.ui.view">
+    <field name="name">dms.file.tree.inherit.flow</field>
+    <field name="model">dms.file</field>
+    <field name="inherit_id" ref="dms.view_dms_file_tree"/>
+    <field name="arch" type="xml">
+      <xpath expr="//tree" position="inside">
+        <field name="ref_no"/>
+        <field name="status"/>
+        <field name="department_id"/>
+        <field name="date_received"/>
+      </xpath>
+    </field>
+  </record>
+</odoo>

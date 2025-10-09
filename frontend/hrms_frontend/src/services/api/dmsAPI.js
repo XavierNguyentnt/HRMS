@@ -4,8 +4,6 @@ import URL from "../../util/url";
 
 /**
  * Lấy danh sách văn bản (model: dms.file)
- * @param {Array} filters - Bộ lọc dạng Odoo domain
- * @param {number} limit - Giới hạn số bản ghi
  */
 export const fetchDocuments = async (filters = [], limit = 100) => {
   const params = {
@@ -16,10 +14,17 @@ export const fetchDocuments = async (filters = [], limit = 100) => {
       fields: [
         "id",
         "name",
-        "ref_no",
-        "status",
-        "department_id",
-        "date_received",
+        "directory_id",
+        "company_id",
+        "mimetype",
+        "extension",
+        "create_uid",
+        "create_date",
+        "write_date",
+        "human_size",
+        "path_names",
+        "icon_url",
+        "access_url",
       ],
       order: "create_date desc",
       limit,
@@ -41,7 +46,7 @@ export const fetchDocuments = async (filters = [], limit = 100) => {
 };
 
 /**
- * Lấy chi tiết một văn bản (theo ID)
+ * Lấy chi tiết 1 văn bản
  */
 export const fetchDocumentDetail = async (id) => {
   const params = {
@@ -52,12 +57,18 @@ export const fetchDocumentDetail = async (id) => {
       [
         "id",
         "name",
-        "ref_no",
-        "summary",
-        "status",
-        "department_id",
-        "date_received",
-        "route_ids",
+        "directory_id",
+        "company_id",
+        "mimetype",
+        "extension",
+        "create_uid",
+        "create_date",
+        "write_date",
+        "human_size",
+        "path_names",
+        "icon_url",
+        "access_url",
+        "description",
       ],
     ],
     kwargs: { context: { lang: "vi_VN" } },
@@ -77,52 +88,70 @@ export const fetchDocumentDetail = async (id) => {
 };
 
 /**
- * Tạo mới văn bản
- * @param {Object} data - Dữ liệu của văn bản cần tạo
+ * 🆕 Tạo mới file DMS (upload thực tế qua ir.attachment)
+ * @param {Object} fileData
+ * @param {string} fileData.name - Tên file
+ * @param {string} fileData.mimetype - Kiểu MIME
+ * @param {string} fileData.base64Data - Nội dung file base64
+ * @param {number} [fileData.directory_id] - ID thư mục đích (tuỳ chọn)
+ * @param {number} [fileData.company_id] - ID công ty (tuỳ chọn)
  */
-export const createDocument = async (data) => {
-  const params = {
-    model: "dms.file",
-    method: "create",
-    args: [data],
-    kwargs: { context: { lang: "vi_VN" } },
-  };
-
+export const createDocument = async (fileData) => {
   try {
-    const response = await axiosInstance.post(URL.RPC_CALL, {
-      jsonrpc: "2.0",
-      params,
-    });
-    if (response.data.error) throw new Error(response.data.error.data.message);
-    return response.data.result; // Trả về ID của văn bản mới
-  } catch (error) {
-    console.error("Lỗi khi tạo mới văn bản:", error);
-    throw new Error(error.message || "Không thể tạo mới văn bản.");
-  }
-};
+    // 1️⃣ Tạo attachment chứa dữ liệu thực tế
+    const attachParams = {
+      model: "ir.attachment",
+      method: "create",
+      args: [
+        {
+          name: fileData.name,
+          datas: fileData.base64Data,
+          mimetype: fileData.mimetype || "application/octet-stream",
+          res_model: "dms.file",
+          type: "binary",
+        },
+      ],
+      kwargs: { context: { lang: "vi_VN" } },
+    };
 
-/**
- * Cập nhật thông tin văn bản
- * @param {number} id - ID của văn bản
- * @param {object} updateData - Các trường cần cập nhật
- */
-export const updateDocument = async (id, updateData) => {
-  const params = {
-    model: "dms.file",
-    method: "write",
-    args: [[id], updateData],
-    kwargs: { context: { lang: "vi_VN" } },
-  };
-
-  try {
-    const response = await axiosInstance.post(URL.RPC_CALL, {
+    const attachResponse = await axiosInstance.post(URL.RPC_CALL, {
       jsonrpc: "2.0",
-      params,
+      params: attachParams,
     });
-    if (response.data.error) throw new Error(response.data.error.data.message);
-    return response.data.result; // true nếu cập nhật thành công
+
+    if (attachResponse.data.error)
+      throw new Error(attachResponse.data.error.data.message);
+
+    const attachmentId = attachResponse.data.result;
+
+    // 2️⃣ Tạo dms.file và liên kết đến attachment vừa tạo
+    const fileParams = {
+      model: "dms.file",
+      method: "create",
+      args: [
+        {
+          name: fileData.name,
+          attachment_id: attachmentId,
+          directory_id: fileData.directory_id || false,
+          company_id: fileData.company_id || false,
+          mimetype: fileData.mimetype,
+          save_type: "database",
+        },
+      ],
+      kwargs: { context: { lang: "vi_VN" } },
+    };
+
+    const fileResponse = await axiosInstance.post(URL.RPC_CALL, {
+      jsonrpc: "2.0",
+      params: fileParams,
+    });
+
+    if (fileResponse.data.error)
+      throw new Error(fileResponse.data.error.data.message);
+
+    return fileResponse.data.result; // Trả về ID của bản ghi dms.file
   } catch (error) {
-    console.error("Lỗi khi cập nhật văn bản:", error);
-    throw new Error(error.message || "Không thể cập nhật văn bản.");
+    console.error("Lỗi khi tạo mới tài liệu:", error);
+    throw new Error(error.message || "Không thể tạo tài liệu mới.");
   }
 };
