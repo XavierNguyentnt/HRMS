@@ -70,7 +70,15 @@ const DmsNewFileModal = ({ show, onHide, onSuccess }) => {
 
   // --- Xử lý upload ---
   const handleFileChange = (e) => {
-    setForm({ ...form, file: e.target.files[0] });
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const fileName = file.name.replace(/\.[^/.]+$/, ""); // bỏ phần .ext
+    setForm((prev) => ({
+      ...prev,
+      file,
+      name: prev.name || fileName, // chỉ auto-fill nếu chưa nhập
+    }));
   };
 
   const handleSubmit = async () => {
