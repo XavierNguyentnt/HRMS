@@ -594,3 +594,52 @@ h1 {
   margin-left: auto;
   margin-right: auto;
 }
+
+/*DMS*/
+.directory-panel {
+  width: 260px;
+  min-width: 260px;
+  max-width: 300px;
+  height: calc(100vh - 130px);
+  overflow-y: auto;
+  transition: all 0.3s ease;
+}
+
+.directory-panel.collapsed {
+  width: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.directory-item .directory-row {
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.directory-item .directory-row:hover {
+  background-color: #f1f3f5;
+}
+
+.directory-item .directory-row.active {
+  background-color: #e7f1ff;
+  font-weight: 600;
+}
+
+.directory-item .btn-toggle {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin-right: 4px;
+  color: #6c757d;
+}
+
+.documents-page {
+  height: calc(100vh - 70px);
+  overflow: hidden;
+}
+
+.documents-page .dms-directory-panel {
+  transition: all 0.3s ease;
+  border-left: 1px solid #dee2e6;
+  background-color: #f8f9fa;
+}

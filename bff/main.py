@@ -5,6 +5,7 @@ import logging
 import re
 import uuid
 from fastapi import FastAPI, HTTPException, Depends, APIRouter, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Any, Dict
 from datetime import datetime
@@ -34,6 +35,17 @@ ODOO_PASSWORD = os.getenv("ODOO_PASSWORD")
 app = FastAPI(title="KDPD HRMS AI API")
 api_router = APIRouter(prefix="/api/ai")
 analysis_results: Dict[str, Any] = {}
+# ⚙️ Cho phép React (localhost:3000) gọi API
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",   # React dev
+        "http://127.0.0.1:3000",  # Trường hợp khác
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # =========================================================
 # MODEL DỮ LIỆU
@@ -244,6 +256,54 @@ async def get_analysis_status(task_id: str):
         raise HTTPException(status_code=404, detail="Không tìm thấy tác vụ.")
     
     return {"task_id": task_id, "status": task["status"], "result": task["result"]}
+
+# =========================================================
+# 📂 API LẤY CÂY THƯ MỤC DMS TỪ ODOO
+# =========================================================
+@api_router.get("/dms/directories")
+async def get_dms_directories(odoo: Any = Depends(get_odoo_client)):
+    try:
+        logger.info("📁 Đang truy vấn danh sách thư mục DMS từ Odoo (sudo)...")
+
+        Directory = odoo.env["dms.directory"]
+        directories = Directory.search_read(
+            [],
+            ["id", "name", "parent_id", "complete_name", "count_files", "count_elements"],
+            order="complete_name asc",
+        )
+
+        logger.info(f"📦 Nhận {len(directories)} thư mục (sudo).")
+
+        if not directories:
+            logger.warning("⚠️ Không có dữ liệu dù đã sudo().")
+            return {"count": 0, "data": []}
+
+        directory_map = {}
+        for d in directories:
+            directory_map[d["id"]] = {
+                "id": d["id"],
+                "name": d.get("name") or "Không tên",
+                "parent_id": d["parent_id"][0] if d.get("parent_id") else None,
+                "complete_name": d.get("complete_name"),
+                "count_files": d.get("count_files", 0),
+                "count_elements": d.get("count_elements", 0),
+                "children": [],
+            }
+
+        root_nodes = []
+        for dir_data in directory_map.values():
+            parent_id = dir_data.get("parent_id")
+            if parent_id and parent_id in directory_map:
+                directory_map[parent_id]["children"].append(dir_data)
+            else:
+                root_nodes.append(dir_data)
+
+        logger.info(f"✅ Xây dựng cây hoàn tất. Root nodes: {len(root_nodes)}")
+        return {"count": len(directories), "data": root_nodes}
+
+    except Exception as e:
+        logger.error(f"❌ Lỗi khi truy vấn DMS directories: {e}", exc_info=True)
+        raise HTTPException(status_code=503, detail=f"Lỗi truy vấn Odoo: {e}")
 
 # =========================================================
 # GẮN ROUTER

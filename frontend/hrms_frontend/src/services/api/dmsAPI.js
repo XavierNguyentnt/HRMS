@@ -42,6 +42,7 @@ export const fetchDocuments = async (filters = [], limit = 100) => {
         "create_date",
         "write_date",
         "human_size",
+        "attachment_id",
         "path_names",
         "icon_url",
         "access_url",
@@ -58,15 +59,54 @@ export const fetchDocuments = async (filters = [], limit = 100) => {
       params,
     });
     if (response.data.error) throw new Error(response.data.error.data.message);
-    return response.data.result || [];
+
+    const docs = response.data.result || [];
+
+    // Nếu file nào chưa có human_size, truy vấn sang ir.attachment
+    const fixedDocs = await Promise.all(
+      docs.map(async (doc) => {
+        if (doc.human_size) return doc;
+
+        if (doc.attachment_id?.[0]) {
+          try {
+            const attParams = {
+              model: "ir.attachment",
+              method: "read",
+              args: [[doc.attachment_id[0]], ["file_size"]],
+              kwargs: {},
+            };
+            const attRes = await axiosInstance.post(URL.RPC_CALL, {
+              jsonrpc: "2.0",
+              params: attParams,
+            });
+            const attach = attRes.data.result?.[0];
+            if (attach?.file_size) {
+              return {
+                ...doc,
+                size: attach.file_size,
+                human_size: humanFileSize(attach.file_size),
+              };
+            }
+          } catch {
+            // bỏ qua nếu lỗi nhỏ
+          }
+        }
+
+        // fallback nếu không lấy được size
+        return { ...doc, size: 0, human_size: "0 B" };
+      })
+    );
+
+    return fixedDocs;
   } catch (error) {
-    console.error("Lỗi khi tải danh sách văn bản:", error);
+    console.error("❌ Lỗi khi tải danh sách văn bản:", error);
     throw new Error(error.message || "Không thể tải danh sách văn bản.");
   }
 };
 
 /**
  * Lấy chi tiết 1 văn bản
+ * Luôn trả về size & human_size chính xác.
  */
 export const fetchDocumentDetail = async (id) => {
   const params = {
@@ -85,6 +125,7 @@ export const fetchDocumentDetail = async (id) => {
         "create_date",
         "write_date",
         "human_size",
+        "attachment_id",
         "path_names",
         "icon_url",
         "access_url",
@@ -100,9 +141,28 @@ export const fetchDocumentDetail = async (id) => {
       params,
     });
     if (response.data.error) throw new Error(response.data.error.data.message);
-    return response.data.result?.[0] || {};
+    const doc = response.data.result?.[0] || {};
+
+    if (!doc.human_size && doc.attachment_id?.[0]) {
+      const attParams = {
+        model: "ir.attachment",
+        method: "read",
+        args: [[doc.attachment_id[0]], ["file_size"]],
+      };
+      const attRes = await axiosInstance.post(URL.RPC_CALL, {
+        jsonrpc: "2.0",
+        params: attParams,
+      });
+      const attach = attRes.data.result?.[0];
+      if (attach?.file_size) {
+        doc.size = attach.file_size;
+        doc.human_size = humanFileSize(attach.file_size);
+      }
+    }
+
+    return doc;
   } catch (error) {
-    console.error("Lỗi khi lấy chi tiết văn bản:", error);
+    console.error("❌ Lỗi khi lấy chi tiết văn bản:", error);
     throw new Error(error.message || "Không thể tải chi tiết văn bản.");
   }
 };
@@ -181,5 +241,32 @@ export const createDocument = async (fileData) => {
   } catch (error) {
     console.error("Lỗi khi tạo mới tài liệu:", error);
     throw new Error(error.message || "Không thể tạo tài liệu mới.");
+  }
+};
+
+/*GET DIRECTORIES TREE*/
+export const fetchDirectories = async () => {
+  try {
+    const BFF_BASE =
+      process.env.REACT_APP_BFF_URL || "http://localhost:8000/api/ai";
+
+    const response = await fetch(`${BFF_BASE}/dms/directories`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Lỗi HTTP: ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    // ✅ Trả về mảng thư mục đúng cấu trúc (root_nodes)
+    return Array.isArray(result.data) ? result.data : [];
+  } catch (err) {
+    console.error("❌ Lỗi khi tải cây thư mục:", err);
+    return [];
   }
 };

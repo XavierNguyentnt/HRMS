@@ -197,44 +197,52 @@ function ProfilePage() {
       setError(null);
       try {
         let data;
+
+        // KHI XEM HỒ SƠ NGƯỜI KHÁC
         if (employeeId) {
           data = await odooApi.fetchEmployeeById(
             parseInt(employeeId, 10),
             isOwnProfile,
             isManager
           );
-        } else if (user) {
-          data = await odooApi.fetchUserProfile(
-            user.id,
-            true, // isSelf
-            isManager
-          );
+        }
+        // SỬA LỖI & TỐI ƯU TẠI ĐÂY: KHI XEM HỒ SƠ CỦA CHÍNH MÌNH
+        else if (user) {
+          // Không cần gọi API nữa, chỉ cần dùng lại dữ liệu từ context
+          data = user;
         } else {
+          // Nếu không có employeeId và cũng không có user, báo lỗi
           throw new Error("Không thể xác định hồ sơ để hiển thị.");
         }
 
         if (data) {
+          // Chuẩn hóa dữ liệu để component luôn nhận được định dạng nhất quán
           const formattedData = {
             ...data,
-            country_id: data.country_id ? data.country_id[0] : "",
+            country_id: data.country_id
+              ? Array.isArray(data.country_id)
+                ? data.country_id[0]
+                : data.country_id
+              : "",
             private_state_id: data.private_state_id
-              ? data.private_state_id[0]
+              ? Array.isArray(data.private_state_id)
+                ? data.private_state_id[0]
+                : data.private_state_id
               : "",
           };
           setProfileData(formattedData);
-          // TỐI ƯU 1 (tiếp): Lưu dữ liệu gốc
-          setOriginalProfileData(formattedData);
+          setOriginalProfileData(formattedData); // Lưu bản gốc để so sánh khi sửa
 
-          // Tải dữ liệu liên quan
+          // Tải dữ liệu liên quan (Kỹ năng, Kinh nghiệm)
           setIsSkillsLoading(true);
           setIsResumeLoading(true);
           const [skillDetails, resumeDetails] = await Promise.all([
             data.employee_skill_ids?.length > 0
               ? odooApi.fetchEmployeeSkills(data.employee_skill_ids)
-              : [],
+              : Promise.resolve([]),
             data.resume_line_ids?.length > 0
               ? odooApi.fetchEmployeeResumeLines(data.resume_line_ids)
-              : [],
+              : Promise.resolve([]),
           ]);
 
           const groupedSkills = skillDetails.reduce((acc, s) => {
@@ -255,7 +263,7 @@ function ProfilePage() {
       }
     };
     loadData();
-  }, [employeeId, isManager, isOwnProfile, user]);
+  }, [employeeId, user, isManager, isOwnProfile]);
 
   // === Xử lý cho Modal Thêm Kỹ năng ===
   const handleShowSkillModal = async () => {
