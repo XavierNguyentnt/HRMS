@@ -13,7 +13,8 @@ import { useDocuments } from "../../hooks/useDocuments";
 import { Upload, Plus, PanelRightClose, PanelRightOpen } from "lucide-react";
 
 const DocumentsPage = () => {
-  const { items, loading, setFilters, refresh, filters } = useDocuments();
+  const { immediateItems, allItems, loading, setFilters, refresh, filters } =
+    useDocuments();
   const [viewMode, setViewMode] = useState("kanban");
   const [showUpload, setShowUpload] = useState(false);
   const [showNewFile, setShowNewFile] = useState(false);
@@ -69,17 +70,21 @@ const DocumentsPage = () => {
           <div className="text-center py-5">
             <Spinner animation="border" />
           </div>
-        ) : items.length === 0 ? (
+        ) : immediateItems.length === 0 ? (
           <div className="text-center text-muted py-5">
             Không có tài liệu nào.
           </div>
         ) : viewMode === "list" ? (
           <DmsListView
-            documents={items.filter((item) => item.type === "file")}
+            documents={allItems}
             onNavigate={handleSelectDirectory}
-          /> // Chỉ hiển thị file trong List
+          /> // List view vẫn dùng allItems
         ) : (
-          <DmsKanbanView items={items} onNavigate={handleSelectDirectory} /> // Hiển thị cả 2 trong Kanban
+          <DmsKanbanView
+            immediateItems={immediateItems}
+            allItems={allItems}
+            onNavigate={handleSelectDirectory}
+          /> // Hiển thị cả 2 trong Kanban
         )}
 
         <DmsNewFileModal

@@ -51,20 +51,50 @@ const FileCard = ({ doc }) => {
   );
 };
 
-const DmsKanbanView = ({ items, onNavigate }) => {
+const DmsKanbanView = ({ immediateItems, allItems, onNavigate }) => {
   return (
-    <div className="d-flex flex-wrap gap-3">
-      {items.map((item) =>
-        item.type === "directory" ? (
-          <DirectoryCard
-            key={`dir-${item.id}`}
-            dir={item}
-            onNavigate={onNavigate}
-          />
+    <div>
+      {/* ===== KHU VỰC TRÊN ===== */}
+      <div className="mb-4">
+        <h5 className="fw-bold text-muted mb-3">Thư mục và Tệp tin</h5>
+        {immediateItems && immediateItems.length > 0 ? (
+          <div className="d-flex flex-wrap gap-3">
+            {immediateItems.map((item) =>
+              item.type === "directory" ? (
+                <DirectoryCard
+                  key={`dir-${item.id}`}
+                  dir={item}
+                  onNavigate={onNavigate}
+                />
+              ) : (
+                <FileCard key={`file-${item.id}`} doc={item} />
+              )
+            )}
+          </div>
         ) : (
-          <FileCard key={`file-${item.id}`} doc={item} />
-        )
-      )}
+          <p className="text-muted fst-italic">
+            Không có thư mục con hoặc tệp tin trực tiếp.
+          </p>
+        )}
+      </div>
+
+      <hr />
+
+      {/* ===== KHU VỰC DƯỚI ===== */}
+      <div className="mt-4">
+        <h5 className="fw-bold text-muted mb-3">Tất cả Tệp tin</h5>
+        {allItems && allItems.length > 0 ? (
+          <div className="d-flex flex-wrap gap-3">
+            {allItems.map((item) => (
+              <FileCard key={`all-file-${item.id}`} doc={item} />
+            ))}
+          </div>
+        ) : (
+          <p className="text-muted fst-italic">
+            Không có tệp tin nào trong thư mục này.
+          </p>
+        )}
+      </div>
     </div>
   );
 };

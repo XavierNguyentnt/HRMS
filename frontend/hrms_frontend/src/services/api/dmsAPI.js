@@ -318,3 +318,44 @@ export const fetchDirectories = async () => {
     return [];
   }
 };
+
+/**
+ * Lấy các file con trực tiếp của một thư mục
+ */
+export const fetchImmediateFiles = async (directoryId) => {
+  const domain = directoryId
+    ? [["directory_id", "=", directoryId]]
+    : [["directory_id", "=", false]];
+
+  const params = {
+    model: "dms.file",
+    method: "search_read",
+    args: [domain],
+    kwargs: {
+      fields: [
+        "id",
+        "name",
+        "human_size",
+        "path_names",
+        "icon_url",
+        "access_url",
+      ],
+      order: "name asc",
+    },
+  };
+
+  try {
+    const response = await axiosInstance.post(URL.RPC_CALL, {
+      jsonrpc: "2.0",
+      params,
+    });
+    if (response.data.error) throw new Error(response.data.error.data.message);
+    return response.data.result || [];
+  } catch (err) {
+    console.error(
+      `❌ Lỗi khi tải file trực tiếp của thư mục ${directoryId}:`,
+      err
+    );
+    return [];
+  }
+};

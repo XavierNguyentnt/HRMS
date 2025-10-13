@@ -1,10 +1,15 @@
 // src/hooks/useDocuments.js (Phiên bản đã sửa lỗi debounce)
 import { useState, useCallback, useEffect, useMemo } from "react"; // 👈 1. Import thêm useMemo
-import { fetchDocuments, fetchSubDirectories } from "../../services/api/dmsAPI";
+import {
+  fetchDocuments,
+  fetchSubDirectories,
+  fetchImmediateFiles,
+} from "../../services/api/dmsAPI";
 import { debounce } from "lodash";
 
 export const useDocuments = () => {
-  const [items, setItems] = useState([]);
+  const [immediateItems, setImmediateItems] = useState([]); // Cho khu vực trên
+  const [allItems, setAllItems] = useState([]); // Cho khu vực dưới
   const [loading, setLoading] = useState(false);
 
   // State cho các bộ lọc
@@ -19,9 +24,9 @@ export const useDocuments = () => {
   const loadDocuments = useCallback(async () => {
     setLoading(true);
     try {
-      const domain = [];
+      const allFilesDomain = [];
       if (searchTerm) {
-        domain.push(
+        allFilesDomain.push(
           "|",
           "|",
           ["name", "ilike", searchTerm],
@@ -30,24 +35,33 @@ export const useDocuments = () => {
         );
       }
       if (selectedDir) {
-        domain.push(["directory_id", "child_of", selectedDir.id]);
+        allFilesDomain.push(["directory_id", "child_of", selectedDir.id]);
       }
       if (dateRange.from) {
-        domain.push(["create_date", ">=", dateRange.from]);
+        allFilesDomain.push(["create_date", ">=", dateRange.from]);
       }
       if (dateRange.to) {
-        domain.push(["create_date", "<=", dateRange.to + "T23:59:59"]);
+        allFilesDomain.push(["create_date", "<=", dateRange.to + "T23:59:59"]);
       }
       const sortOrder = `${sortConfig.field} ${sortConfig.order}`;
-      const [filesData, subDirsData] = await Promise.all([
-        fetchDocuments(domain, 200, sortOrder),
-        fetchSubDirectories(selectedDir?.id),
-      ]);
-      const files = filesData.map((f) => ({ ...f, type: "file" }));
-      const directories = subDirsData.map((d) => ({ ...d, type: "directory" }));
+      const [allFilesData, subDirsData, immediateFilesData] = await Promise.all(
+        [
+          fetchDocuments(allFilesDomain, 200, sortOrder), // Dữ liệu cho khu vực dưới
+          fetchSubDirectories(selectedDir?.id), // Thư mục cho khu vực trên
+          fetchImmediateFiles(selectedDir?.id), // File cho khu vực trên
+        ]
+      );
 
-      // Trộn 2 mảng lại, thư mục luôn ở trên đầu
-      setItems([...directories, ...files]);
+      // Chuẩn bị dữ liệu cho khu vực trên (Thư mục + File trực tiếp)
+      const directories = subDirsData.map((d) => ({ ...d, type: "directory" }));
+      const immediateFiles = immediateFilesData.map((f) => ({
+        ...f,
+        type: "file",
+      }));
+      setImmediateItems([...directories, ...immediateFiles]);
+
+      // Chuẩn bị dữ liệu cho khu vực dưới (Tất cả file)
+      setAllItems(allFilesData.map((f) => ({ ...f, type: "file" })));
     } catch (err) {
       console.error("Lỗi tải tài liệu:", err);
     } finally {
@@ -73,7 +87,8 @@ export const useDocuments = () => {
   }, [debouncedLoadDocuments]);
 
   return {
-    items,
+    immediateItems, // 👈 Trả về danh sách cho khu vực trên
+    allItems, // 👈 Trả về danh sách cho khu vực dưới
     loading,
     filters: { sortConfig, searchTerm, dateRange, selectedDir },
     setFilters: { setSortConfig, setSearchTerm, setDateRange, setSelectedDir },
