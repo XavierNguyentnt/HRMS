@@ -25,79 +25,78 @@ const humanFileSize = (bytes) => {
 /**
  * Lấy danh sách văn bản (model: dms.file)
  */
-export const fetchDocuments = async (filters = [], limit = 100) => {
-  const params = {
-    model: "dms.file",
-    method: "search_read",
-    args: [filters],
-    kwargs: {
-      fields: [
-        "id",
-        "name",
-        "directory_id",
-        "company_id",
-        "mimetype",
-        "extension",
-        "create_uid",
-        "create_date",
-        "write_date",
-        "human_size",
-        "attachment_id",
-        "path_names",
-        "icon_url",
-        "access_url",
-      ],
-      order: "create_date desc",
-      limit,
-      context: { lang: "vi_VN" },
-    },
-  };
-
+export const fetchDocuments = async (
+  filters = [],
+  limit = 100,
+  sort = "create_date desc"
+) => {
   try {
-    const response = await axiosInstance.post(URL.RPC_CALL, {
+    const fileParams = {
+      model: "dms.file",
+      method: "search_read",
+      args: [filters],
+      kwargs: {
+        fields: [
+          "id",
+          "name",
+          "directory_id",
+          "company_id",
+          "mimetype",
+          "extension",
+          "create_uid",
+          "create_date",
+          "write_date",
+          "human_size",
+          "attachment_id",
+          "path_names",
+          "icon_url",
+          "access_url",
+        ],
+        order: sort,
+        limit,
+        context: { lang: "vi_VN" },
+      },
+    };
+    const fileResponse = await axiosInstance.post(URL.RPC_CALL, {
       jsonrpc: "2.0",
-      params,
+      params: fileParams,
     });
-    if (response.data.error) throw new Error(response.data.error.data.message);
+    if (fileResponse.data.error)
+      throw new Error(fileResponse.data.error.data.message);
+    const docs = fileResponse.data.result || [];
+    const attachmentIds = docs
+      .filter((doc) => !doc.human_size && doc.attachment_id)
+      .map((doc) => doc.attachment_id[0]);
 
-    const docs = response.data.result || [];
+    if (attachmentIds.length === 0) return docs;
 
-    // Nếu file nào chưa có human_size, truy vấn sang ir.attachment
-    const fixedDocs = await Promise.all(
-      docs.map(async (doc) => {
-        if (doc.human_size) return doc;
+    const sizeParams = {
+      model: "ir.attachment",
+      method: "search_read",
+      args: [[["id", "in", attachmentIds]]],
+      kwargs: { fields: ["id", "file_size"] },
+    };
+    const sizeResponse = await axiosInstance.post(URL.RPC_CALL, {
+      jsonrpc: "2.0",
+      params: sizeParams,
+    });
+    if (sizeResponse.data.error)
+      throw new Error(sizeResponse.data.error.data.message);
+    const sizes = sizeResponse.data.result || [];
 
-        if (doc.attachment_id?.[0]) {
-          try {
-            const attParams = {
-              model: "ir.attachment",
-              method: "read",
-              args: [[doc.attachment_id[0]], ["file_size"]],
-              kwargs: {},
-            };
-            const attRes = await axiosInstance.post(URL.RPC_CALL, {
-              jsonrpc: "2.0",
-              params: attParams,
-            });
-            const attach = attRes.data.result?.[0];
-            if (attach?.file_size) {
-              return {
-                ...doc,
-                size: attach.file_size,
-                human_size: humanFileSize(attach.file_size),
-              };
-            }
-          } catch {
-            // bỏ qua nếu lỗi nhỏ
-          }
-        }
+    const sizeMap = new Map();
+    sizes.forEach((sizeInfo) => sizeMap.set(sizeInfo.id, sizeInfo.file_size));
 
-        // fallback nếu không lấy được size
-        return { ...doc, size: 0, human_size: "0 B" };
-      })
-    );
-
-    return fixedDocs;
+    const finalDocs = docs.map((doc) => {
+      if (doc.human_size) return doc;
+      const attachmentId = doc.attachment_id ? doc.attachment_id[0] : null;
+      if (attachmentId && sizeMap.has(attachmentId)) {
+        const fileSize = sizeMap.get(attachmentId);
+        return { ...doc, size: fileSize, human_size: humanFileSize(fileSize) };
+      }
+      return { ...doc, size: 0, human_size: "0 B" };
+    });
+    return finalDocs;
   } catch (error) {
     console.error("❌ Lỗi khi tải danh sách văn bản:", error);
     throw new Error(error.message || "Không thể tải danh sách văn bản.");
@@ -244,27 +243,69 @@ export const createDocument = async (fileData) => {
   }
 };
 
+/**
+ * Hàm tiện ích xây dựng cây từ danh sách phẳng
+ * Dữ liệu trả về sẽ có cấu trúc lồng nhau với thuộc tính 'children'
+ */
+// const buildTree = (items) => {
+//   const map = new Map();
+//   const roots = [];
+
+//   items.forEach((item) => {
+//     map.set(item.id, { ...item, children: [] });
+//   });
+
+//   map.forEach((item) => {
+//     const parentId = item.parent_id ? item.parent_id[0] : null;
+//     if (parentId && map.has(parentId)) {
+//       map.get(parentId).children.push(item);
+//     } else {
+//       roots.push(item);
+//     }
+//   });
+
+//   return roots;
+// };
+
 /*GET DIRECTORIES TREE*/
 export const fetchDirectories = async () => {
+  const params = {
+    model: "dms.directory",
+    method: "search_read",
+    args: [[]], // Lấy tất cả thư mục
+    kwargs: {
+      fields: ["id", "name", "parent_id", "complete_name"],
+      order: "complete_name asc",
+      context: { lang: "vi_VN" },
+    },
+  };
+
   try {
-    const BFF_BASE =
-      process.env.REACT_APP_BFF_URL || "http://localhost:8000/api/ai";
-
-    const response = await fetch(`${BFF_BASE}/dms/directories`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
+    const response = await axiosInstance.post(URL.RPC_CALL, {
+      jsonrpc: "2.0",
+      params,
     });
+    if (response.data.error) throw new Error(response.data.error.data.message);
 
-    if (!response.ok) {
-      throw new Error(`Lỗi HTTP: ${response.status}`);
-    }
-
-    const result = await response.json();
-
-    // ✅ Trả về mảng thư mục đúng cấu trúc (root_nodes)
-    return Array.isArray(result.data) ? result.data : [];
+    const flatDirs = response.data.result || [];
+    // 👇 Chuyển hàm buildTree vào đây
+    const buildTree = (items) => {
+      const map = new Map();
+      const roots = [];
+      items.forEach((item) => {
+        map.set(item.id, { ...item, children: [] });
+      });
+      map.forEach((item) => {
+        const parentId = item.parent_id ? item.parent_id[0] : null;
+        if (parentId && map.has(parentId)) {
+          map.get(parentId).children.push(item);
+        } else {
+          roots.push(item);
+        }
+      });
+      return roots;
+    };
+    return buildTree(flatDirs);
   } catch (err) {
     console.error("❌ Lỗi khi tải cây thư mục:", err);
     return [];

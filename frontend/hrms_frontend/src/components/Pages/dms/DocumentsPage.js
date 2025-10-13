@@ -1,5 +1,5 @@
 // src/components/Pages/DMS/DocumentsPage.js
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { fetchDocuments } from "../../../services/api/dmsAPI";
 import DmsToolbar from "./DmsToolbar";
 import DmsListView from "./DmsListView";
@@ -7,99 +7,29 @@ import DmsKanbanView from "./DmsKanbanView";
 import DmsUploadModal from "./DmsUploadModal";
 import DmsNewFileModal from "./DmsNewFileModal";
 import DmsDirectoryPanel from "./DmsDirectoryPanel";
+import DmsBreadcrumbs from "./DmsBreadcrumbs";
 import { Button, Spinner } from "react-bootstrap";
+import { useDocuments } from "../../hooks/useDocuments";
 import { Upload, Plus, PanelRightClose, PanelRightOpen } from "lucide-react";
 
 const DocumentsPage = () => {
-  const [documents, setDocuments] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const { documents, loading, setFilters, refresh, filters } = useDocuments();
   const [viewMode, setViewMode] = useState("kanban");
   const [showUpload, setShowUpload] = useState(false);
   const [showNewFile, setShowNewFile] = useState(false);
-  const [sortConfig, setSortConfig] = useState({
-    field: "create_date",
-    order: "desc",
-  });
-  const [searchTerm, setSearchTerm] = useState("");
-  const [dateRange, setDateRange] = useState({ from: "", to: "" });
-  const [selectedDir, setSelectedDir] = useState(null);
   const [showDirectoryPanel, setShowDirectoryPanel] = useState(true);
+  const [breadcrumbPath, setBreadcrumbPath] = useState([]);
 
-  // 📂 Load danh sách file từ Odoo
-  const loadDocuments = async () => {
-    setLoading(true);
-    try {
-      const data = await fetchDocuments([], 200);
-      setDocuments(data);
-    } catch (err) {
-      console.error("Lỗi tải tài liệu:", err);
-    } finally {
-      setLoading(false);
-    }
+  // Lấy selectedDir để truyền cho Modal
+  const [selectedDir, setSelectedDirState] = useState(null);
+  const handleSelectDirectory = (dir, path) => {
+    setSelectedDirState(dir);
+    setFilters.setSelectedDir(dir);
+    setBreadcrumbPath(path); // 👈 Cập nhật state đường dẫn
   };
-
-  useEffect(() => {
-    loadDocuments();
-  }, []);
-
-  // 🔍 Lọc và sắp xếp dữ liệu
-  const filteredDocs = useMemo(() => {
-    return documents
-      .filter((doc) => {
-        const term = searchTerm.toLowerCase();
-        const matchSearch =
-          doc.name?.toLowerCase().includes(term) ||
-          doc.path_names?.toLowerCase().includes(term) ||
-          doc.create_uid?.[1]?.toLowerCase().includes(term);
-
-        // 🗂 Lọc theo thư mục
-        const matchDir =
-          !selectedDir || doc.directory_id?.[0] === selectedDir.id;
-
-        // 📅 Lọc theo ngày
-        const docDate = new Date(doc.create_date);
-        const fromOK = dateRange.from
-          ? docDate >= new Date(dateRange.from)
-          : true;
-        const toOK = dateRange.to
-          ? docDate <= new Date(dateRange.to + "T23:59:59")
-          : true;
-
-        return matchSearch && fromOK && toOK && matchDir;
-      })
-      .sort((a, b) => {
-        const { field, order } = sortConfig;
-        const parseSize = (v) => {
-          if (!v || typeof v !== "string") return 0;
-          const [num, unit] = v.split(" ");
-          const n = parseFloat(num);
-          if (unit === "KB") return n * 1024;
-          if (unit === "MB") return n * 1024 * 1024;
-          return n || 0;
-        };
-        let valA = a[field];
-        let valB = b[field];
-
-        if (field === "create_date") {
-          valA = new Date(a.create_date);
-          valB = new Date(b.create_date);
-        } else if (field === "human_size") {
-          valA = parseSize(a.human_size);
-          valB = parseSize(b.human_size);
-        } else if (Array.isArray(valA)) {
-          valA = valA[1] || "";
-          valB = valB[1] || "";
-        }
-
-        if (valA < valB) return order === "asc" ? -1 : 1;
-        if (valA > valB) return order === "asc" ? 1 : -1;
-        return 0;
-      });
-  }, [documents, searchTerm, sortConfig, dateRange, selectedDir]);
 
   return (
     <div className="documents-page d-flex">
-      {/* 🌟 Khu vực chính */}
       <div className="flex-grow-1 p-3">
         <div className="d-flex justify-content-between align-items-center mb-3">
           <h4 className="fw-bold mb-0">📁 Quản lý tài liệu</h4>
@@ -122,46 +52,49 @@ const DocumentsPage = () => {
           </div>
         </div>
 
-        {/* 🧭 Toolbar: Search + Sort + View Switch */}
+        <DmsBreadcrumbs
+          path={breadcrumbPath} // 👈 Truyền đường dẫn xuống
+          onNavigate={handleSelectDirectory}
+        />
+
         <DmsToolbar
-          onSearch={setSearchTerm}
-          onSortChange={setSortConfig}
+          onSearch={setFilters.setSearchTerm}
+          onSortChange={setFilters.setSortConfig}
           onViewChange={setViewMode}
-          onDateFilter={setDateRange}
+          onDateFilter={setFilters.setDateRange}
           currentView={viewMode}
         />
 
-        {/* 📄 Danh sách hoặc Kanban */}
         {loading ? (
           <div className="text-center py-5">
             <Spinner animation="border" />
           </div>
-        ) : filteredDocs.length === 0 ? (
+        ) : documents.length === 0 ? (
           <div className="text-center text-muted py-5">
             Không có tài liệu nào.
           </div>
         ) : viewMode === "list" ? (
-          <DmsListView documents={filteredDocs} />
+          <DmsListView documents={documents} />
         ) : (
-          <DmsKanbanView documents={filteredDocs} />
+          <DmsKanbanView documents={documents} />
         )}
 
-        {/* 📤 Modal tạo mới / upload */}
         <DmsNewFileModal
           show={showNewFile}
           onHide={() => setShowNewFile(false)}
-          onSuccess={loadDocuments}
+          onSuccess={refresh} // Gọi hàm refresh từ hook
+          selectedDirId={selectedDir?.id}
         />
         <DmsUploadModal
           show={showUpload}
           onHide={() => setShowUpload(false)}
-          onUploaded={loadDocuments}
+          onUploaded={refresh} // Gọi hàm refresh từ hook
+          selectedDirId={selectedDir?.id}
         />
       </div>
 
-      {/* 🌲 Cây thư mục bên phải */}
       {showDirectoryPanel && (
-        <DmsDirectoryPanel onSelectDirectory={setSelectedDir} />
+        <DmsDirectoryPanel onSelectDirectory={handleSelectDirectory} />
       )}
     </div>
   );

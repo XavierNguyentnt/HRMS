@@ -643,3 +643,87 @@ h1 {
   border-left: 1px solid #dee2e6;
   background-color: #f8f9fa;
 }
+
+/* ✅ FIX: Đổi màu chữ thành trắng khi chọn thư mục trong DMS Panel */
+.dms-directory-panel .list-group-item-action.active {
+  color: var(--color-primary-text) !important; /* Đảm bảo chữ có màu trắng */
+  background-color: var(
+    --color-primary
+  ) !important; /* Đảm bảo nền là màu chính */
+}
+
+/* Áp dụng cho cả span chứa tên thư mục và nút "Tất cả" */
+.dms-directory-panel .list-group-item-action.active .text-truncate,
+.dms-directory-panel
+  .list-group-item-action.active
+  .o_search_panel_label_title {
+  color: var(--color-primary-text) !important;
+}
+
+/* src/App.css */
+
+/* =============================================== */
+/* == ODOO-LIKE TREE VIEW STYLES                == */
+/* =============================================== */
+
+.odoo-tree-view {
+  list-style: none;
+  padding-left: 0;
+}
+
+.odoo-tree-view .tree-node {
+  position: relative;
+  padding-left: 20px; /* Tạo không gian cho các đường kẻ */
+}
+
+.odoo-tree-view .tree-node-header {
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: 4px;
+  width: 100%;
+}
+.odoo-tree-view .tree-node-header:hover {
+  background-color: var(--hover-bg-color);
+}
+.odoo-tree-view .tree-node-header.active {
+  background-color: var(--color-primary);
+  color: var(--color-primary-text);
+}
+
+/* Đường kẻ ngang nối vào item */
+.odoo-tree-view .tree-node::before {
+  content: "";
+  position: absolute;
+  top: 15px; /* Điều chỉnh để thẳng hàng với icon/text */
+  left: 0;
+  width: 15px;
+  height: 1px;
+  background-color: #ccc;
+}
+
+/* Đường kẻ dọc nối các item anh em */
+.odoo-tree-view .tree-node::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 1px;
+  background-color: #ccc;
+}
+
+/* Ẩn đường kẻ dọc cho item cuối cùng trong một cấp */
+.odoo-tree-view .tree-node.is-last::after {
+  display: none;
+}
+
+/* Placeholder cho các mục không có con */
+.tree-node-leaf-placeholder {
+  display: inline-block;
+  width: 25px; /* Bằng với chiều rộng của nút toggle */
+}
+
+.odoo-tree-view .tree-node-children {
+  padding-left: 0;
+  list-style: none;
+}

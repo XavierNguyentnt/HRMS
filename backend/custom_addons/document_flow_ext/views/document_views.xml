@@ -4,33 +4,30 @@
     <field name="model">dms.file</field>
     <field name="inherit_id" ref="dms.view_dms_file_form"/>
     <field name="arch" type="xml">
-      <sheet position="inside">
+      <xpath expr="//sheet" position="inside">
         <group string="Thông tin văn bản" colspan="2">
-          <field name="ref_no"/>
-          <field name="document_type"/>
-          <field name="status"/>
-          <field name="priority"/>
-          <field name="department_id"/>
-          <field name="receiver_ids" widget="many2many_tags"/>
-          <field name="date_received"/>
-          <field name="date_signed"/>
-          <field name="summary"/>
+          <group>
+            <field name="ref_no"/>
+            <field name="document_type"/>
+            <field name="status"/>
+            <field name="priority"/>
+          </group>
+          <group>
+            <field name="department_id"/>
+            <field name="receiver_ids" widget="many2many_tags"/>
+            <field name="date_received"/>
+            <field name="date_signed"/>
+          </group>
         </group>
+        <field name="summary" placeholder="Trích yếu nội dung văn bản..."/>
+        
         <notebook>
           <page string="Luồng xử lý">
-            <field name="route_ids">
-              <tree editable="bottom">
-                <field name="from_department_id"/>
-                <field name="to_department_id"/>
-                <field name="assigned_to"/>
-                <field name="status"/>
-                <field name="date_sent"/>
-                <field name="date_received"/>
-              </tree>
-            </field>
+            <field name="route_ids"/>
           </page>
         </notebook>
-      </sheet>
+      </xpath>
     </field>
   </record>
-</odoo>
+  
+  </odoo>

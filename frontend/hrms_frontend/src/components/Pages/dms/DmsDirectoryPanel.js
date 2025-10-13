@@ -1,8 +1,24 @@
 // src/components/Pages/DMS/DmsDirectoryPanel.js
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { fetchDirectories } from "../../../services/api/dmsAPI";
-import { Folder } from "lucide-react";
 import { FaCaretRight, FaCaretDown } from "react-icons/fa";
+
+// 👇 1. THÊM ĐỊNH NGHĨA HÀM findPath VÀO ĐÂY
+const findPath = (flatDirectories, dirId) => {
+  if (!flatDirectories || flatDirectories.length === 0 || !dirId) return [];
+
+  const map = new Map();
+  flatDirectories.forEach((dir) => map.set(dir.id, dir));
+
+  const path = [];
+  let currentId = dirId;
+  while (currentId && map.has(currentId)) {
+    const currentDir = map.get(currentId);
+    path.unshift(currentDir);
+    currentId = currentDir.parent_id ? currentDir.parent_id[0] : null;
+  }
+  return path;
+};
 
 const DmsDirectoryPanel = ({ onSelectDirectory }) => {
   const [directories, setDirectories] = useState([]);
@@ -22,43 +38,54 @@ const DmsDirectoryPanel = ({ onSelectDirectory }) => {
     loadDirs();
   }, []);
 
-  // toggle mở/đóng thư mục
   const toggleExpand = (id) => {
     setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  // 👇 2. TẠO DANH SÁCH PHẲNG ĐỂ TRUYỀN VÀO findPath
+  const flatDirectories = useMemo(() => {
+    const flatten = (dirs) => {
+      let list = [];
+      for (const dir of dirs) {
+        const { children, ...rest } = dir; // Tách children ra
+        list.push(rest); // Chỉ push thông tin của dir hiện tại
+        if (children) {
+          list = list.concat(flatten(children));
+        }
+      }
+      return list;
+    };
+    return flatten(directories);
+  }, [directories]);
+
   const handleSelect = (dir) => {
     if (!dir) {
       setSelectedId(null);
-      onSelectDirectory?.(null);
+      onSelectDirectory?.(null, []);
       return;
     }
-    setSelectedId(dir.id);
-    onSelectDirectory?.(dir);
+    // 👇 3. GỌI HÀM VÀ CẬP NHẬT STATE KHI CLICK
+    setSelectedId(dir.id); // Cập nhật ID được chọn
+    const path = findPath(flatDirectories, dir.id);
+    onSelectDirectory?.(dir, path);
   };
 
-  const renderNode = (dir, level = 0) => {
+  const renderNode = (dir, level = 0, isLast = false) => {
     const hasChildren = dir.children && dir.children.length > 0;
     const isOpen = expanded[dir.id];
     const isActive = dir.id === selectedId;
 
     return (
-      <li
-        key={dir.id}
-        className="o_search_panel_category_value list-group-item py-1 cursor-pointer border-0 pe-0 ps-0">
-        <header
-          className={`list-group-item list-group-item-action d-flex align-items-center px-0 py-lg-0 border-0 ${
-            isActive ? "active text-900 fw-bold text-primary" : ""
-          }`}
-          onClick={() => handleSelect(dir)}
-          style={{ paddingLeft: `${level * 12}px` }}>
-          <div
-            className="o_search_panel_label d-flex align-items-center overflow-hidden w-100 cursor-pointer mb-0 o_with_counters"
-            title={dir.name}>
-            {/* Nút mở/đóng */}
+      <li key={dir.id} className={`tree-node ${isLast ? "is-last" : ""}`}>
+        <div className="d-flex align-items-center">
+          <header
+            className={`tree-node-header list-group-item-action d-flex align-items-center ${
+              isActive ? "active" : ""
+            }`}
+            onClick={() => handleSelect(dir)}>
             {hasChildren ? (
               <button
-                className="btn p-0 px-1 flex-shrink-0 text-center text-muted"
+                className="btn p-0 px-1 me-1"
                 onClick={(e) => {
                   e.stopPropagation();
                   toggleExpand(dir.id);
@@ -70,30 +97,17 @@ const DmsDirectoryPanel = ({ onSelectDirectory }) => {
                 )}
               </button>
             ) : (
-              <span className="px-2" />
+              <span className="tree-node-leaf-placeholder" />
             )}
+            <span className="text-truncate">{dir.name}</span>
+          </header>
+        </div>
 
-            {/* Tên thư mục */}
-            <span
-              className={`text-truncate ${
-                isActive ? "fw-bold text-primary" : ""
-              }`}>
-              {dir.name}
-            </span>
-          </div>
-
-          {/* Counter */}
-          {dir.count_files > 0 && (
-            <small className="o_search_panel_counter text-muted mx-2 fw-bold">
-              {dir.count_files}
-            </small>
-          )}
-        </header>
-
-        {/* Đệ quy con */}
         {hasChildren && isOpen && (
-          <ul className="list-group border-0 ps-0">
-            {dir.children.map((child) => renderNode(child, level + 1))}
+          <ul className="tree-node-children list-group border-0 ps-0">
+            {dir.children.map((child, index) =>
+              renderNode(child, level + 1, index === dir.children.length - 1)
+            )}
           </ul>
         )}
       </li>
@@ -110,22 +124,24 @@ const DmsDirectoryPanel = ({ onSelectDirectory }) => {
           <b>Thư mục</b>
         </header>
 
-        <ul className="list-group d-block o_search_panel_field px-2 px-md-0">
+        <ul className="odoo-tree-view list-group d-block o_search_panel_field px-2 px-md-0">
           <li
-            className={`o_search_panel_category_value list-group-item py-1 cursor-pointer border-0 pe-0 ps-0 ${
-              selectedId === null ? "active text-900 fw-bold text-primary" : ""
+            className={`tree-node is-last ${
+              selectedId === null ? "active" : ""
             }`}
             onClick={() => handleSelect(null)}>
-            <header className="list-group-item list-group-item-action d-flex align-items-center px-0 py-lg-0 border-0">
-              <div className="o_search_panel_label d-flex align-items-center overflow-hidden w-100 cursor-pointer mb-0 o_with_counters">
-                <span className="o_search_panel_label_title text-truncate fw-bold">
-                  Tất cả
-                </span>
-              </div>
+            <header
+              className={`tree-node-header list-group-item-action d-flex align-items-center ${
+                selectedId === null ? "active" : ""
+              }`}>
+              <span className="tree-node-leaf-placeholder" />
+              <span className="text-truncate fw-bold">Tất cả</span>
             </header>
           </li>
 
-          {directories.map((dir) => renderNode(dir))}
+          {directories.map((dir, index) =>
+            renderNode(dir, 0, index === directories.length - 1)
+          )}
         </ul>
       </section>
     </div>
