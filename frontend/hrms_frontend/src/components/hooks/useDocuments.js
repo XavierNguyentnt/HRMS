@@ -1,10 +1,10 @@
 // src/hooks/useDocuments.js (Phiên bản đã sửa lỗi debounce)
 import { useState, useCallback, useEffect, useMemo } from "react"; // 👈 1. Import thêm useMemo
-import { fetchDocuments } from "../../services/api/dmsAPI";
+import { fetchDocuments, fetchSubDirectories } from "../../services/api/dmsAPI";
 import { debounce } from "lodash";
 
 export const useDocuments = () => {
-  const [documents, setDocuments] = useState([]);
+  const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
 
   // State cho các bộ lọc
@@ -39,8 +39,15 @@ export const useDocuments = () => {
         domain.push(["create_date", "<=", dateRange.to + "T23:59:59"]);
       }
       const sortOrder = `${sortConfig.field} ${sortConfig.order}`;
-      const data = await fetchDocuments(domain, 200, sortOrder);
-      setDocuments(data);
+      const [filesData, subDirsData] = await Promise.all([
+        fetchDocuments(domain, 200, sortOrder),
+        fetchSubDirectories(selectedDir?.id),
+      ]);
+      const files = filesData.map((f) => ({ ...f, type: "file" }));
+      const directories = subDirsData.map((d) => ({ ...d, type: "directory" }));
+
+      // Trộn 2 mảng lại, thư mục luôn ở trên đầu
+      setItems([...directories, ...files]);
     } catch (err) {
       console.error("Lỗi tải tài liệu:", err);
     } finally {
@@ -66,7 +73,7 @@ export const useDocuments = () => {
   }, [debouncedLoadDocuments]);
 
   return {
-    documents,
+    items,
     loading,
     filters: { sortConfig, searchTerm, dateRange, selectedDir },
     setFilters: { setSortConfig, setSearchTerm, setDateRange, setSelectedDir },

@@ -244,28 +244,35 @@ export const createDocument = async (fileData) => {
 };
 
 /**
- * Hàm tiện ích xây dựng cây từ danh sách phẳng
- * Dữ liệu trả về sẽ có cấu trúc lồng nhau với thuộc tính 'children'
+ * Lấy các thư mục con trực tiếp của một thư mục cha
  */
-// const buildTree = (items) => {
-//   const map = new Map();
-//   const roots = [];
+export const fetchSubDirectories = async (parentId) => {
+  if (parentId === null || parentId === undefined) {
+    // Nếu không có parentId (đang ở gốc), lấy các thư mục gốc
+    return fetchDirectories(true); // Thêm một tham số để chỉ lấy danh sách phẳng
+  }
 
-//   items.forEach((item) => {
-//     map.set(item.id, { ...item, children: [] });
-//   });
-
-//   map.forEach((item) => {
-//     const parentId = item.parent_id ? item.parent_id[0] : null;
-//     if (parentId && map.has(parentId)) {
-//       map.get(parentId).children.push(item);
-//     } else {
-//       roots.push(item);
-//     }
-//   });
-
-//   return roots;
-// };
+  const params = {
+    model: "dms.directory",
+    method: "search_read",
+    args: [[["parent_id", "=", parentId]]],
+    kwargs: {
+      fields: ["id", "name", "complete_name"],
+      order: "name asc",
+    },
+  };
+  try {
+    const response = await axiosInstance.post(URL.RPC_CALL, {
+      jsonrpc: "2.0",
+      params,
+    });
+    if (response.data.error) throw new Error(response.data.error.data.message);
+    return response.data.result || [];
+  } catch (err) {
+    console.error(`❌ Lỗi khi tải thư mục con của ${parentId}:`, err);
+    return [];
+  }
+};
 
 /*GET DIRECTORIES TREE*/
 export const fetchDirectories = async () => {
