@@ -359,3 +359,97 @@ export const fetchImmediateFiles = async (directoryId) => {
     return [];
   }
 };
+
+/**
+ * Tạo một thư mục mới
+ */
+export const createDirectory = async (name, parentId = false) => {
+  const params = {
+    model: "dms.directory",
+    method: "create",
+    args: [{ name, parent_id: parentId }],
+    kwargs: {},
+  };
+  try {
+    const response = await axiosInstance.post(URL.RPC_CALL, {
+      jsonrpc: "2.0",
+      params,
+    });
+    if (response.data.error) throw new Error(response.data.error.data.message);
+    return response.data.result;
+  } catch (error) {
+    console.error("❌ Lỗi khi tạo thư mục:", error);
+    throw error;
+  }
+};
+
+/**
+ * Đổi tên một file hoặc thư mục
+ */
+export const renameItem = async (model, id, newName) => {
+  const params = {
+    model: model, // 'dms.file' hoặc 'dms.directory'
+    method: "write",
+    args: [[id], { name: newName }],
+    kwargs: {},
+  };
+  try {
+    const response = await axiosInstance.post(URL.RPC_CALL, {
+      jsonrpc: "2.0",
+      params,
+    });
+    if (response.data.error) throw new Error(response.data.error.data.message);
+    return response.data.result;
+  } catch (error) {
+    console.error(`❌ Lỗi khi đổi tên ${model} ID ${id}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Di chuyển một file hoặc thư mục
+ */
+export const moveItem = async (model, id, newParentId) => {
+  // Di chuyển file là thay đổi 'directory_id', di chuyển thư mục là thay đổi 'parent_id'
+  const fieldToUpdate = model === "dms.file" ? "directory_id" : "parent_id";
+
+  const params = {
+    model: model,
+    method: "write",
+    args: [[id], { [fieldToUpdate]: newParentId }],
+    kwargs: {},
+  };
+  try {
+    const response = await axiosInstance.post(URL.RPC_CALL, {
+      jsonrpc: "2.0",
+      params,
+    });
+    if (response.data.error) throw new Error(response.data.error.data.message);
+    return response.data.result;
+  } catch (error) {
+    console.error(`❌ Lỗi khi di chuyển ${model} ID ${id}:`, error);
+    throw error;
+  }
+};
+/**
+ * Xóa một file hoặc thư mục
+ */
+export const deleteItem = async (model, id) => {
+  const params = {
+    model: model, // 'dms.file' hoặc 'dms.directory'
+    method: "unlink",
+    args: [[id]],
+    kwargs: {},
+  };
+  try {
+    const response = await axiosInstance.post(URL.RPC_CALL, {
+      jsonrpc: "2.0",
+      params,
+    });
+    if (response.data.error) throw new Error(response.data.error.data.message);
+    return response.data.result;
+  } catch (error) {
+    console.error(`❌ Lỗi khi xóa ${model} ID ${id}:`, error);
+    throw error;
+  }
+};

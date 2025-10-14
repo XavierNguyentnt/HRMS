@@ -4,12 +4,12 @@ import { Card } from "react-bootstrap";
 import { Folder } from "lucide-react";
 
 // Component con cho card thư mục
-const DirectoryCard = ({ dir, onNavigate }) => (
+const DirectoryCard = ({ dir, onNavigate, onContextMenu, breadcrumbPath }) => (
   <Card
     className="p-3 shadow-sm border-0 d-flex flex-column justify-content-center align-items-center"
     style={{ width: 220, height: 180, cursor: "pointer", borderRadius: "12px" }}
-    onClick={() => onNavigate(dir, [])} // Path tạm rỗng, vì ta chỉ điều hướng 1 cấp
-  >
+    onClick={() => onNavigate(dir, [...breadcrumbPath, dir])} // Path tạm rỗng, vì ta chỉ điều hướng 1 cấp
+    onContextMenu={(e) => onContextMenu(e, { ...dir, type: "directory" })}>
     <Folder size={60} strokeWidth={1} className="text-primary mb-2" />
     <div className="fw-semibold text-truncate text-center w-100">
       {dir.name}
@@ -18,7 +18,7 @@ const DirectoryCard = ({ dir, onNavigate }) => (
 );
 
 // Component con cho card file
-const FileCard = ({ doc }) => {
+const FileCard = ({ doc, onContextMenu }) => {
   const baseUrl =
     process.env.REACT_APP_ODOO_BASE_URL || "http://localhost:8069";
   return (
@@ -36,7 +36,8 @@ const FileCard = ({ doc }) => {
           "_blank",
           "noopener,noreferrer"
         )
-      }>
+      }
+      onContextMenu={(e) => onContextMenu(e, { ...doc, type: "file" })}>
       <img
         src={`${baseUrl}${doc.icon_url}`}
         alt="icon"
@@ -51,7 +52,13 @@ const FileCard = ({ doc }) => {
   );
 };
 
-const DmsKanbanView = ({ immediateItems, allItems, onNavigate }) => {
+const DmsKanbanView = ({
+  immediateItems,
+  allItems,
+  onNavigate,
+  onContextMenu,
+  breadcrumbPath,
+}) => {
   return (
     <div>
       {/* ===== KHU VỰC TRÊN ===== */}
@@ -65,9 +72,15 @@ const DmsKanbanView = ({ immediateItems, allItems, onNavigate }) => {
                   key={`dir-${item.id}`}
                   dir={item}
                   onNavigate={onNavigate}
+                  onContextMenu={onContextMenu}
+                  breadcrumbPath={breadcrumbPath}
                 />
               ) : (
-                <FileCard key={`file-${item.id}`} doc={item} />
+                <FileCard
+                  key={`file-${item.id}`}
+                  doc={item}
+                  onContextMenu={onContextMenu}
+                />
               )
             )}
           </div>
@@ -86,7 +99,11 @@ const DmsKanbanView = ({ immediateItems, allItems, onNavigate }) => {
         {allItems && allItems.length > 0 ? (
           <div className="d-flex flex-wrap gap-3">
             {allItems.map((item) => (
-              <FileCard key={`all-file-${item.id}`} doc={item} />
+              <FileCard
+                key={`all-file-${item.id}`}
+                doc={item}
+                onContextMenu={onContextMenu}
+              />
             ))}
           </div>
         ) : (

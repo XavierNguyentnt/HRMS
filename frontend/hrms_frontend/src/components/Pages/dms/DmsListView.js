@@ -1,8 +1,8 @@
-// src/components/Pages/DMS/DmsListView.js
+// src/components/Pages/DMS/DmsListView.js (Đã cập nhật)
 import React from "react";
 import { Table, Button } from "react-bootstrap";
 
-const DmsListView = ({ documents, onNavigate }) => {
+const DmsListView = ({ documents, onNavigate, onContextMenu }) => {
   const baseUrl =
     process.env.REACT_APP_ODOO_BASE_URL || "http://localhost:8069";
 
@@ -19,7 +19,9 @@ const DmsListView = ({ documents, onNavigate }) => {
       </thead>
       <tbody>
         {documents.map((doc) => (
-          <tr key={doc.id}>
+          <tr
+            key={doc.id}
+            onContextMenu={(e) => onContextMenu(e, { ...doc, type: "file" })}>
             <td>
               <a
                 href={`${baseUrl}${doc.access_url}`}
@@ -30,7 +32,6 @@ const DmsListView = ({ documents, onNavigate }) => {
             </td>
             <td>
               {doc.directory_id ? (
-                // ✨ Biến tên thư mục thành một nút có thể click
                 <Button
                   variant="link"
                   className="p-0 text-start"
