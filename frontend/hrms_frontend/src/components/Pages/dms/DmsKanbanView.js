@@ -38,12 +38,28 @@ const DirectoryCard = ({
   // 👇 TẠO MỘT HÀM KIỂM TRA ĐIỀU KIỆN THẢ (Tái sử dụng logic từ react-dnd)
   const canDropItem = (draggedItems) => {
     if (!draggedItems || draggedItems.length === 0) return false;
-    // Kiểm tra để không thả vào chính nó hoặc vào thư mục con trực tiếp
-    return draggedItems.every(
-      (it) => it.id !== dir.id && it.parent_id?.[0] !== dir.id
-    );
-  };
 
+    // Kiểm tra từng item đang được kéo
+    return draggedItems.every((it) => {
+      // Điều kiện 1: Không thể thả một thư mục vào chính nó.
+      if (it.type === "directory" && it.id === dir.id) {
+        return false;
+      }
+
+      // Điều kiện 2: Không thể thả một item vào thư mục mà nó đang chứa.
+      let currentParentId;
+      if (it.type === "directory") {
+        // Nếu là thư mục, kiểm tra parent_id
+        currentParentId = it.parent_id ? it.parent_id[0] : false;
+      } else {
+        // Nếu là file, kiểm tra directory_id
+        currentParentId = it.directory_id ? it.directory_id[0] : false;
+      }
+
+      // So sánh ID thư mục cha hiện tại với ID của thư mục đích
+      return currentParentId !== dir.id;
+    });
+  };
   // --- Logic kéo đi (react-dnd) ---
   const [{ isDragging }, drag] = useDrag(() => ({
     type: ItemTypes.DMS_ITEM,
