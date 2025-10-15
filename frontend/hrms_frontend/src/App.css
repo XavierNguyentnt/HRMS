@@ -1,4 +1,5 @@
 :root {
+  --contexify-zIndex: 9999 !important;
   /* 1. Bảng màu chính (Primary Palette) */
   --app-color-primary: #ffa600; /* Orange - Màu chính cho nút, link... */
   --app-color-primary-dark: #e69500; /* Màu khi hover, active */
@@ -635,7 +636,6 @@ h1 {
 
 .documents-page {
   height: calc(100vh - 70px);
-  /* overflow: hidden; */
 }
 
 .documents-page .dms-directory-panel {
@@ -728,10 +728,6 @@ h1 {
 .odoo-tree-view .tree-node-children {
   padding-left: 0;
   list-style: none;
-}
-/* Đảm bảo context menu luôn hiển thị trên các thành phần khác (vd: Modal) */
-.react-contexify {
-  z-index: 99999 !important;
 }
 
 /* DMS Drag and Drop styles */

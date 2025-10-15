@@ -384,13 +384,19 @@ export const createDirectory = async (name, parentId = false) => {
 };
 
 /**
- * Đổi tên một file hoặc thư mục
+ * Sao chép một file hoặc thư mục sang vị trí mới
  */
-export const renameItem = async (model, id, newName) => {
+export const copyItem = async (model, id, newParentId) => {
+  // Tên trường cần ghi đè: 'directory_id' cho file, 'parent_id' cho thư mục
+  const fieldToUpdate = model === "dms.file" ? "directory_id" : "parent_id";
+
   const params = {
-    model: model, // 'dms.file' hoặc 'dms.directory'
-    method: "write",
-    args: [[id], { name: newName }],
+    model: model,
+    method: "copy", // Sử dụng phương thức 'copy' của Odoo
+    args: [
+      [id], // ID của bản ghi gốc cần sao chép
+      { [fieldToUpdate]: newParentId }, // Giá trị mới cho thư mục cha
+    ],
     kwargs: {},
   };
   try {
@@ -401,7 +407,7 @@ export const renameItem = async (model, id, newName) => {
     if (response.data.error) throw new Error(response.data.error.data.message);
     return response.data.result;
   } catch (error) {
-    console.error(`❌ Lỗi khi đổi tên ${model} ID ${id}:`, error);
+    console.error(`❌ Lỗi khi sao chép ${model} ID ${id}:`, error);
     throw error;
   }
 };
@@ -431,6 +437,30 @@ export const moveItem = async (model, id, newParentId) => {
     throw error;
   }
 };
+
+/**
+ * Đổi tên một file hoặc thư mục
+ */
+export const renameItem = async (model, id, newName) => {
+  const params = {
+    model: model, // 'dms.file' hoặc 'dms.directory'
+    method: "write",
+    args: [[id], { name: newName }],
+    kwargs: {},
+  };
+  try {
+    const response = await axiosInstance.post(URL.RPC_CALL, {
+      jsonrpc: "2.0",
+      params,
+    });
+    if (response.data.error) throw new Error(response.data.error.data.message);
+    return response.data.result;
+  } catch (error) {
+    console.error(`❌ Lỗi khi đổi tên ${model} ID ${id}:`, error);
+    throw error;
+  }
+};
+
 /**
  * Xóa một file hoặc thư mục
  */
@@ -451,5 +481,34 @@ export const deleteItem = async (model, id) => {
   } catch (error) {
     console.error(`❌ Lỗi khi xóa ${model} ID ${id}:`, error);
     throw error;
+  }
+};
+
+/**
+ * Lấy danh sách các THƯ MỤC CON TRỰC TIẾP của một thư mục cha.
+ * Dùng cho Modal Di chuyển.
+ * @param {number|false} parentId - ID của thư mục cha, hoặc false để lấy các thư mục gốc.
+ */
+export const fetchSubFolders = async (parentId = false) => {
+  const domain = [["parent_id", "=", parentId]];
+  const params = {
+    model: "dms.directory",
+    method: "search_read",
+    args: [domain],
+    kwargs: {
+      fields: ["id", "name", "complete_name"],
+      order: "name asc",
+    },
+  };
+  try {
+    const response = await axiosInstance.post(URL.RPC_CALL, {
+      jsonrpc: "2.0",
+      params,
+    });
+    if (response.data.error) throw new Error(response.data.error.data.message);
+    return response.data.result || [];
+  } catch (err) {
+    console.error(`❌ Lỗi khi tải thư mục con của ${parentId}:`, err);
+    return [];
   }
 };

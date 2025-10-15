@@ -18,8 +18,6 @@ root.render(
       <BrowserRouter>
         <AuthProvider>
           <SidebarProvider>
-            {" "}
-            {/* Bọc App trong SidebarProvider */}
             <App />
           </SidebarProvider>
         </AuthProvider>

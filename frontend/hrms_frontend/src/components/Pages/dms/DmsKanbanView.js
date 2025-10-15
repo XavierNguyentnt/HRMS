@@ -1,22 +1,27 @@
 // src/components/Pages/DMS/DmsKanbanView.js
-import React from "react";
+
+import React, { useState, useEffect } from "react";
 import { Card } from "react-bootstrap";
 import { Folder } from "lucide-react";
 import { useDrag, useDrop } from "react-dnd";
+import {
+  broadcastDragStart,
+  listenForDndMessages,
+  broadcastDragEnd,
+} from "../../../services/dndChannel";
 
 const ItemTypes = { DMS_ITEM: "dms_item" };
 
 // 🧩 Helper: tạo payload drag động
 const makeDragItem = (itemData, selectedItems) => {
   if (!selectedItems || selectedItems.length === 0) return [itemData];
-  // Nếu item hiện tại nằm trong selectedItems => kéo cả nhóm
   const isPartOfSelection = selectedItems.some(
     (it) => it.id === itemData.id && it.type === itemData.type
   );
   return isPartOfSelection ? selectedItems : [itemData];
 };
 
-// 🗂️ DirectoryCard
+// 🗂️ DirectoryCard (Phiên bản nâng cấp)
 const DirectoryCard = ({
   dir,
   onContextMenu,
@@ -25,46 +30,91 @@ const DirectoryCard = ({
   isSelected,
   onMoveItem,
   selectedItems,
+  externalDragData,
 }) => {
   const itemData = { ...dir, type: "directory" };
+  const [isExternalDragOver, setIsExternalDragOver] = useState(false);
 
-  // Kéo đi
+  // 👇 TẠO MỘT HÀM KIỂM TRA ĐIỀU KIỆN THẢ (Tái sử dụng logic từ react-dnd)
+  const canDropItem = (draggedItems) => {
+    if (!draggedItems || draggedItems.length === 0) return false;
+    // Kiểm tra để không thả vào chính nó hoặc vào thư mục con trực tiếp
+    return draggedItems.every(
+      (it) => it.id !== dir.id && it.parent_id?.[0] !== dir.id
+    );
+  };
+
+  // --- Logic kéo đi (react-dnd) ---
   const [{ isDragging }, drag] = useDrag(() => ({
     type: ItemTypes.DMS_ITEM,
-    item: () => ({ items: makeDragItem(itemData, selectedItems) }),
+    item: () => {
+      const dragItems = makeDragItem(itemData, selectedItems);
+      broadcastDragStart(dragItems); // Gửi thông tin cho cửa sổ khác
+      return { items: dragItems };
+    },
+    end: () => {
+      broadcastDragEnd(); // Báo cho cửa sổ khác là đã kéo xong
+    },
     collect: (monitor) => ({
       isDragging: !!monitor.isDragging(),
     }),
   }));
 
-  // Thả vào
+  // --- Logic thả vào (react-dnd, cho nội bộ) ---
   const [{ isOver, canDrop }, drop] = useDrop(() => ({
     accept: ItemTypes.DMS_ITEM,
     drop: (dragData) => {
       const draggedItems = dragData.items || [];
       if (draggedItems.length > 0) onMoveItem(draggedItems, dir.id);
     },
-    canDrop: (draggedItem) => {
-      const draggedItems = draggedItem.items || [];
-      return draggedItems.every(
-        (it) => it.id !== dir.id && it.directory_id?.[0] !== dir.id
-      );
-    },
+    canDrop: (dragData) => canDropItem(dragData.items), // Dùng hàm helper
     collect: (monitor) => ({
       isOver: !!monitor.isOver(),
       canDrop: !!monitor.canDrop(),
     }),
   }));
 
+  // --- Logic mới: Xử lý kéo-thả gốc từ cửa sổ khác ---
+  const handleDragOver = (e) => {
+    // Chỉ cho phép thả nếu có dữ liệu từ bên ngoài VÀ thỏa mãn điều kiện
+    if (externalDragData && canDropItem(externalDragData)) {
+      e.preventDefault();
+      setIsExternalDragOver(true);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setIsExternalDragOver(false);
+  };
+
+  const handleDrop = (e) => {
+    // Kiểm tra lại lần cuối trước khi thực hiện
+    if (externalDragData && canDropItem(externalDragData)) {
+      e.preventDefault();
+      onMoveItem(externalDragData, dir.id);
+      broadcastDragEnd();
+      setIsExternalDragOver(false);
+    }
+  };
+
+  const isDropTarget =
+    (isOver && canDrop) ||
+    (isExternalDragOver && canDropItem(externalDragData));
+
   return (
-    <div ref={drag} style={{ opacity: isDragging ? 0.5 : 1 }}>
+    <div
+      ref={drag}
+      style={{ opacity: isDragging ? 0.5 : 1 }}
+      // Gắn các event handler gốc của trình duyệt
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      onDragEnter={handleDragOver}>
       <Card
         ref={drop}
         className={`p-3 shadow-sm d-flex flex-column justify-content-center align-items-center ${
           isSelected ? "border-primary" : ""
-        } ${isOver && canDrop ? "bg-light-success" : ""} ${
-          !isOver && canDrop ? "bg-light-info" : ""
-        }`}
+        } ${isDropTarget ? "bg-light-success" : ""}`}
         style={{
           width: 220,
           height: 180,
@@ -77,7 +127,10 @@ const DirectoryCard = ({
         }}
         onClick={(e) => onItemClick(e, itemData)}
         onDoubleClick={() => onItemDoubleClick(itemData)}
-        onContextMenu={(e) => onContextMenu(e, itemData)}>
+        onContextMenu={(e) => {
+          e.stopPropagation();
+          onContextMenu(e, itemData);
+        }}>
         <Folder size={60} strokeWidth={1} className="text-primary mb-2" />
         <div className="fw-semibold text-truncate text-center w-100">
           {dir.name}
@@ -87,7 +140,7 @@ const DirectoryCard = ({
   );
 };
 
-// 📄 FileCard
+// 📄 FileCard (Cập nhật để gửi thông báo drag)
 const FileCard = ({
   doc,
   onContextMenu,
@@ -100,7 +153,14 @@ const FileCard = ({
 
   const [{ isDragging }, drag] = useDrag(() => ({
     type: ItemTypes.DMS_ITEM,
-    item: () => ({ items: makeDragItem(itemData, selectedItems) }),
+    item: () => {
+      const dragItems = makeDragItem(itemData, selectedItems);
+      broadcastDragStart(dragItems); // Gửi thông tin khi bắt đầu kéo file
+      return { items: dragItems };
+    },
+    end: () => {
+      broadcastDragEnd(); // Gửi thông báo khi kết thúc kéo file
+    },
     collect: (monitor) => ({
       isDragging: !!monitor.isDragging(),
     }),
@@ -125,7 +185,10 @@ const FileCard = ({
         }}
         onClick={(e) => onItemClick(e, itemData)}
         onDoubleClick={() => onItemDoubleClick(itemData)}
-        onContextMenu={(e) => onContextMenu(e, itemData)}>
+        onContextMenu={(e) => {
+          e.stopPropagation();
+          onContextMenu(e, itemData);
+        }}>
         <img
           src={`${baseUrl}${doc.icon_url}`}
           alt="icon"
@@ -152,6 +215,26 @@ const DmsKanbanView = ({
   onItemDoubleClick,
   onMoveItem,
 }) => {
+  // State để lưu dữ liệu kéo từ cửa sổ khác
+  const [externalDragData, setExternalDragData] = useState(null);
+
+  // Lắng nghe tin nhắn từ các cửa sổ khác
+  useEffect(() => {
+    const cleanup = listenForDndMessages((message) => {
+      switch (message.type) {
+        case "DRAG_START":
+          setExternalDragData(message.payload.items);
+          break;
+        case "DRAG_END":
+          setExternalDragData(null);
+          break;
+        default:
+          break;
+      }
+    });
+    return cleanup;
+  }, []);
+
   return (
     <div>
       {/* ===== THƯ MỤC & FILE TRỰC TIẾP ===== */}
@@ -173,6 +256,7 @@ const DmsKanbanView = ({
                   isSelected={isSelected}
                   onMoveItem={onMoveItem}
                   selectedItems={selectedItems}
+                  externalDragData={externalDragData} // Truyền dữ liệu xuống
                 />
               ) : (
                 <FileCard
