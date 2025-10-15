@@ -21,23 +21,23 @@ body {
 
 /* 1. Light Theme (Mặc định) */
 :root {
-  --sidebar-width: 250px;
-  --sidebar-width-collapsed: 70px;
+  --app-sidebar-width: 250px;
+  --app-sidebar-width-collapsed: 70px;
 
-  --header-bg: #ffffff;
-  --sidebar-bg: #f6f7f9;
-  --main-content-bg: #f0f3f6;
-  --card-bg: #ffffff;
+  --app-header-bg: #ffffff;
+  --app-sidebar-bg: #f6f7f9;
+  --app-main-content-bg: #f0f3f6;
+  --app-card-bg: #ffffff;
 
-  --text-primary: #323338;
-  --text-secondary: #676879;
-  --text-on-primary-bg: #ffffff;
+  --app-text-primary: #323338;
+  --app-text-secondary: #676879;
+  --app-text-on-primary-bg: #ffffff;
 
-  --primary-color: #0073ea;
-  --primary-color-hover: #005bb7;
+  --app-primary-color: #0073ea;
+  --app-primary-color-hover: #005bb7;
 
-  --border-color: #e6e9ef;
-  --shadow-color: rgba(0, 0, 0, 0.05);
+  --app-border-color: #e6e9ef;
+  --app-shadow-color: rgba(0, 0, 0, 0.05);
 }
 
 /* 2. Dark Theme */
@@ -60,24 +60,24 @@ body {
 /* 3. Tự động chọn theme dựa trên cài đặt hệ thống */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --header-bg: #202020;
-    --sidebar-bg: #2c2c2c;
-    --main-content-bg: #181818;
-    --card-bg: #2c2c2c;
+    --app-header-bg: #202020;
+    --app-sidebar-bg: #2c2c2c;
+    --app-main-content-bg: #181818;
+    --app-card-bg: #2c2c2c;
 
-    --text-primary: #e0e0e0;
-    --text-secondary: #a0a0a0;
+    --app-text-primary: #e0e0e0;
+    --app-text-secondary: #a0a0a0;
 
-    --primary-color: #3d9dff;
-    --primary-color-hover: #66b5ff;
+    --app-primary-color: #3d9dff;
+    --app-primary-color-hover: #66b5ff;
 
-    --border-color: #404040;
-    --shadow-color: rgba(0, 0, 0, 0.4);
+    --app-border-color: #404040;
+    --app-shadow-color: rgba(0, 0, 0, 0.4);
   }
 }
 
 /* Gán màu cho các thành phần cơ bản */
 body {
-  background-color: var(--main-content-bg);
-  color: var(--text-primary);
+  background-color: var(--app-main-content-bg);
+  color: var(--app-text-primary);
 }

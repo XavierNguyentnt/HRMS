@@ -22,7 +22,7 @@ import {
   fetchTagsDetails,
 } from "../../../services/api";
 import { useAuth, ROLES } from "../../../contexts/AuthContext";
-import { cleanStageName } from "../../../util/formatters";
+import { cleanStageName } from "../../../utils/formatters";
 import TaskModal from "../task_components/TaskModal";
 import KanbanView from "../task_components/TaskKanbanView";
 import ColumnFilter from "../project_components/ColumnFilter"; // Tái sử dụng ColumnFilter

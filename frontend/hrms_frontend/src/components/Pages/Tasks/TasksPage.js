@@ -20,7 +20,7 @@ import {
   deleteTask,
 } from "../../../services/api";
 import { useAuth, ROLES } from "../../../contexts/AuthContext";
-import { cleanStageName } from "../../../util/formatters";
+import { cleanStageName } from "../../../utils/formatters";
 import TaskListItem from "../task_components/TaskListItem";
 import TaskKanbanView from "../task_components/TaskKanbanView";
 import ColumnFilter from "../project_components/ColumnFilter";

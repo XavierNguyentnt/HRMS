@@ -1,20 +1,19 @@
+// src/components/Routes/PrivateRoute.js
 import React from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 
-// Component này hoạt động như một "người gác cổng"
 function PrivateRoute({ children }) {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
 
-  // Nếu chưa có thông tin user (chưa đăng nhập), điều hướng về trang login
-  if (!user) {
-    // Thuộc tính 'replace' sẽ thay thế trang hiện tại trong lịch sử duyệt web,
-    // để người dùng không thể nhấn nút "Back" quay lại trang được bảo vệ.
-    return <Navigate to="/login" replace />;
-  }
+  // 🕒 1. Chờ AuthContext khởi tạo xong
+  if (isLoading) return null;
 
-  // Nếu đã đăng nhập, cho phép hiển thị component con (trang được bảo vệ)
-  return children;
+  // ✅ 2. Nếu chưa đăng nhập → về /login
+  if (!user) return <Navigate to="/login" replace />;
+
+  // ✅ 3. Nếu đã đăng nhập → hiển thị nội dung (children hoặc nested routes)
+  return children ? children : <Outlet />;
 }
 
 export default PrivateRoute;

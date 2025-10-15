@@ -2,8 +2,8 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Button, Form, Row, Col, Spinner } from "react-bootstrap";
 import { createDocument } from "../../../services/api/dmsAPI";
-import axiosInstance from "../../../util/axios_instance";
-import URL from "../../../util/url";
+import axiosInstance from "../../../utils/axios_instance";
+import URL from "../../../utils/url";
 
 const humanFileSize = (bytes) => {
   if (bytes < 1024) return `${bytes} B`;

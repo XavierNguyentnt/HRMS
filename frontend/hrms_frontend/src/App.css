@@ -1,34 +1,34 @@
 :root {
   /* 1. Bảng màu chính (Primary Palette) */
-  --color-primary: #ffa600; /* Orange - Màu chính cho nút, link... */
-  --color-primary-dark: #e69500; /* Màu khi hover, active */
-  --color-primary-light: #ffb733; /* Màu sáng hơn để tạo điểm nhấn */
-  --color-primary-text: #ffffff; /* Màu chữ trên nền màu chính (vd: trên nút) */
+  --app-color-primary: #ffa600; /* Orange - Màu chính cho nút, link... */
+  --app-color-primary-dark: #e69500; /* Màu khi hover, active */
+  --app-color-primary-light: #ffb733; /* Màu sáng hơn để tạo điểm nhấn */
+  --app-color-primary-text: #ffffff; /* Màu chữ trên nền màu chính (vd: trên nút) */
   --header-bg-color: #816838; /* Màu nền header */
-  --border-color: #ced4da; /* Màu viền chung */
+  --app-border-color: #ced4da; /* Màu viền chung */
   --hover-bg-color: #f8f9fa; /* Màu nền khi hover */
   --active-bg-color: #e9ecef; /* Màu nền khi active */
   --disabled-bg-color: #e0e0e0; /* Màu nền khi disabled */
   --disabled-text-color: #6c757d; /* Màu chữ khi disabled */
-  --link-color: #007bff; /* Màu link */
-  --link-hover-color: #0056b3; /* Màu link khi hover*/
+  --app-link-color: #007bff; /* Màu link */
+  --app-link-hover-color: #0056b3; /* Màu link khi hover*/
 
   /* 2. Bảng màu phụ (Accent/Secondary) */
-  --color-secondary: #495057; /* Màu xám đậm cho các yếu tố phụ */
-  --color-secondary-text: #ffffff; /* Màu chữ trên nền phụ */
+  --app-color-secondary: #495057; /* Màu xám đậm cho các yếu tố phụ */
+  --app-color-secondary-text: #ffffff; /* Màu chữ trên nền phụ */
 
   /* 3. Màu theo ngữ cảnh (Semantic Colors) */
-  --color-success: #28a745; /* Thành công - Xanh lá */
-  --color-danger: #dc3545; /* Lỗi/Xóa - Đỏ */
-  --color-warning: #ffc107; /* Cảnh báo - Vàng */
-  --color-info: #17a2b8; /* Thông tin - Xanh dương */
+  --app-color-success: #28a745; /* Thành công - Xanh lá */
+  --app-color-danger: #dc3545; /* Lỗi/Xóa - Đỏ */
+  --app-color-warning: #ffc107; /* Cảnh báo - Vàng */
+  --app-color-info: #17a2b8; /* Thông tin - Xanh dương */
 
   /* 4. Bảng màu trung tính (Neutral/Grayscale) */
-  --color-text-body: #212121; /* Màu chữ chính của toàn trang */
-  --color-text-muted: #6c757d; /* Màu chữ phụ, mờ hơn */
-  --color-bg-body: #f8f9fa; /* Màu nền chính của trang */
-  --color-bg-light: #ffffff; /* Màu nền cho card, header, modal... */
-  --color-border: #dee2e6; /* Màu viền cho các component */
+  --app-color-text-body: #212121; /* Màu chữ chính của toàn trang */
+  --app-color-text-muted: #6c757d; /* Màu chữ phụ, mờ hơn */
+  --app-color-bg-body: #f8f9fa; /* Màu nền chính của trang */
+  --app-color-bg-light: #ffffff; /* Màu nền cho card, header, modal... */
+  --app-color-border: #dee2e6; /* Màu viền cho các component */
   --row-hover-bg: #f1f3f5; /* Màu khi di chuột qua hàng trong bảng */
 }
 
@@ -128,7 +128,7 @@ h1 {
   width: 100%;
   border-collapse: separate; /* cần cho border-radius */
   border-spacing: 0;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--app-border-color);
   border-radius: 8px; /* bo góc */
   overflow: hidden; /* đảm bảo bo góc áp dụng cho header và body */
 }
@@ -136,7 +136,7 @@ h1 {
 /* Header row */
 .unified-table thead.table-header th {
   background-color: var(--header-bg-color) !important;
-  color: var(--color-primary-text) !important; /* chữ trắng */
+  color: var(--app-color-primary-text) !important; /* chữ trắng */
   justify-items: center;
   text-align: center;
   font-weight: 600;
@@ -213,7 +213,7 @@ h1 {
   overflow: auto; /* Bật thanh cuộn khi cần */
   max-height: calc(100vh - 350px);
   position: relative; /* Cần thiết cho hoạt động của sticky */
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--app-border-color);
   border-radius: 8px; /* Giữ bo góc */
 }
 
@@ -250,7 +250,7 @@ h1 {
   left: 0;
   z-index: 1;
   /* Thêm viền phải để tạo ranh giới rõ ràng khi cuộn */
-  border-right: 2px solid var(--border-color);
+  border-right: 2px solid var(--app-border-color);
 }
 
 /* 6. Cung cấp màu nền cho cột đầu tiên để che nội dung bên dưới khi cuộn */
@@ -259,7 +259,7 @@ h1 {
 }
 
 .table-sticky-container tbody td:first-child {
-  background-color: var(--color-bg-light); /* Màu nền của dòng */
+  background-color: var(--app-color-bg-light); /* Màu nền của dòng */
 }
 
 /* Khi hover, đổi màu nền cả cột đầu tiên */
@@ -293,7 +293,7 @@ h1 {
 .status-label {
   font-size: 0.9rem;
   font-weight: 500;
-  color: var(--color-text-body);
+  color: var(--app-color-text-body);
 }
 
 .status-dot {
@@ -635,7 +635,7 @@ h1 {
 
 .documents-page {
   height: calc(100vh - 70px);
-  overflow: hidden;
+  /* overflow: hidden; */
 }
 
 .documents-page .dms-directory-panel {
@@ -646,9 +646,11 @@ h1 {
 
 /* ✅ FIX: Đổi màu chữ thành trắng khi chọn thư mục trong DMS Panel */
 .dms-directory-panel .list-group-item-action.active {
-  color: var(--color-primary-text) !important; /* Đảm bảo chữ có màu trắng */
+  color: var(
+    --app-color-primary-text
+  ) !important; /* Đảm bảo chữ có màu trắng */
   background-color: var(
-    --color-primary
+    --app-color-primary
   ) !important; /* Đảm bảo nền là màu chính */
 }
 
@@ -657,7 +659,7 @@ h1 {
 .dms-directory-panel
   .list-group-item-action.active
   .o_search_panel_label_title {
-  color: var(--color-primary-text) !important;
+  color: var(--app-color-primary-text) !important;
 }
 
 /* src/App.css */
@@ -686,8 +688,8 @@ h1 {
   background-color: var(--hover-bg-color);
 }
 .odoo-tree-view .tree-node-header.active {
-  background-color: var(--color-primary);
-  color: var(--color-primary-text);
+  background-color: var(--app-color-primary);
+  color: var(--app-color-primary-text);
 }
 
 /* Đường kẻ ngang nối vào item */
@@ -726,4 +728,22 @@ h1 {
 .odoo-tree-view .tree-node-children {
   padding-left: 0;
   list-style: none;
+}
+/* Đảm bảo context menu luôn hiển thị trên các thành phần khác (vd: Modal) */
+.react-contexify {
+  z-index: 99999 !important;
+}
+
+/* DMS Drag and Drop styles */
+.bg-light-info {
+  background-color: #e7f1ff !important; /* Màu xanh dương nhạt khi có thể thả */
+}
+
+.bg-light-success {
+  background-color: #e9f7ec !important; /* Màu xanh lá nhạt khi đang kéo qua */
+}
+
+.dms-dragging {
+  opacity: 0.5;
+  border: 2px dashed var(--color-primary);
 }

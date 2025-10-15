@@ -1,4 +1,8 @@
 import React from "react";
+//MOUSE Actions
+// import "react-contexify/dist/ReactContexify.css";
+import "./App.css";
+
 // Thêm 'Outlet' từ react-router-dom
 import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "./contexts/AuthContext";
@@ -26,9 +30,6 @@ import TaskDetailPage from "./components/Pages/Tasks/TaskDetailPage";
 //DMS
 import DocumentsPage from "./components/Pages/dms/DocumentsPage";
 
-//MOUSE Actions
-import "react-contexify/dist/ReactContexify.css";
-
 // =================================================================
 // Component Layout chính: Render Header và nội dung các trang con
 // =================================================================
@@ -47,7 +48,22 @@ const MainLayout = () => {
 };
 
 function App() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div
+        style={{
+          height: "100vh",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          fontWeight: "600",
+        }}>
+        Đang tải phiên đăng nhập...
+      </div>
+    );
+  }
 
   return (
     <div className="App">

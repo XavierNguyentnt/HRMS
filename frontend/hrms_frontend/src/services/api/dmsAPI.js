@@ -1,6 +1,6 @@
 // src/services/api/dmsAPI.js
-import axiosInstance from "../../util/axios_instance";
-import URL from "../../util/url";
+import axiosInstance from "../../utils/axios_instance";
+import URL from "../../utils/url";
 
 /**
  * Tính dung lượng file từ base64

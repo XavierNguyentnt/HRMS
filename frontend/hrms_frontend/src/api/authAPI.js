@@ -1,6 +1,6 @@
 // src/api/authAPI.js
-import axiosInstance from "../util/axios_instance";
-import URL from "../util/url";
+import axiosInstance from "../utils/axios_instance";
+import URL from "../utils/url";
 
 const ODOO_DB = process.env.REACT_APP_ODOO_DATABASE;
 

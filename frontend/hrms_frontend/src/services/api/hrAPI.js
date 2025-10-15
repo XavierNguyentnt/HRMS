@@ -1,6 +1,6 @@
 //src\services\api\hrAPI.js
-import axiosInstance from "../../util/axios_instance";
-import URL from "../../util/url";
+import axiosInstance from "../../utils/axios_instance";
+import URL from "../../utils/url";
 
 // Các trường mà mọi nhân viên đều xem được (public profile)
 const PUBLIC_EMPLOYEE_FIELDS = [

@@ -3,7 +3,7 @@ import React from "react";
 import { Doughnut } from "react-chartjs-2";
 import { Card } from "react-bootstrap";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
-import { cleanStageName } from "../../../util/formatters";
+import { cleanStageName } from "../../../utils/formatters";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 

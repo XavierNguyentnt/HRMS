@@ -1,5 +1,5 @@
-import axiosInstance from "../../util/axios_instance";
-import URL from "../../util/url";
+import axiosInstance from "../../utils/axios_instance";
+import URL from "../../utils/url";
 
 /*========================*/
 /*CÁC API QUẢN TRỊ CÔNG VIỆC*/

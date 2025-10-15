@@ -2,6 +2,8 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "react-contexify/dist/ReactContexify.css";
+import { DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 import "./index.css";
 import "./App.css";
 import App from "./App";
@@ -12,14 +14,16 @@ import { SidebarProvider } from "./contexts/SidebarContext"; // Import provider 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <React.StrictMode>
-    <BrowserRouter>
-      <AuthProvider>
-        <SidebarProvider>
-          {" "}
-          {/* Bọc App trong SidebarProvider */}
-          <App />
-        </SidebarProvider>
-      </AuthProvider>
-    </BrowserRouter>
+    <DndProvider backend={HTML5Backend}>
+      <BrowserRouter>
+        <AuthProvider>
+          <SidebarProvider>
+            {" "}
+            {/* Bọc App trong SidebarProvider */}
+            <App />
+          </SidebarProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </DndProvider>
   </React.StrictMode>
 );

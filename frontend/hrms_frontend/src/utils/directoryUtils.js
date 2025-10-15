@@ -1,4 +1,4 @@
-// src/util/directoryUtils.js
+// src/utils/directoryUtils.js
 export const findPath = (directories, dirId) => {
   const map = new Map();
   directories.forEach((dir) => {
