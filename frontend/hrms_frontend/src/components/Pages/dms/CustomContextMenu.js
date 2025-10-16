@@ -1,50 +1,29 @@
 // src/components/Pages/DMS/CustomContextMenu.js
 
-import React, { useState } from "react";
+import React, { useState, useRef, useLayoutEffect } from "react";
 
-// =================================================================
-// 🧩 COMPONENT CON: MenuItem - Tái sử dụng cho mỗi mục trong menu
-// =================================================================
 const MenuItem = ({ children, onClick, disabled = false, danger = false }) => {
   const [isHovered, setIsHovered] = useState(false);
-
-  // Định nghĩa các kiểu style
   const baseStyle = {
     padding: "8px 16px",
     cursor: "pointer",
     userSelect: "none",
     whiteSpace: "nowrap",
-    display: "block", // Sử dụng display block cho toàn bộ li
+    display: "block",
   };
-
-  const disabledStyle = {
-    color: "#aaa",
-    cursor: "not-allowed",
-  };
-
-  const dangerStyle = {
-    color: "#dc3545", // Màu đỏ cho hành động nguy hiểm
-  };
-
+  const disabledStyle = { color: "#aaa", cursor: "not-allowed" };
+  const dangerStyle = { color: "#dc3545" };
   const hoverStyle = {
     backgroundColor: disabled ? "" : danger ? "#dc3545" : "#0073ea",
     color: disabled ? "" : "white",
   };
-
-  // Kết hợp các style lại với nhau
   const finalStyle = {
     ...baseStyle,
     ...(disabled && disabledStyle),
-    ...(danger && !isHovered && dangerStyle), // Chỉ áp dụng màu đỏ khi không hover
+    ...(danger && !isHovered && dangerStyle),
     ...(isHovered && hoverStyle),
   };
-
-  const handleClick = () => {
-    if (!disabled) {
-      onClick();
-    }
-  };
-
+  const handleClick = () => !disabled && onClick();
   return (
     <li
       style={finalStyle}
@@ -56,9 +35,6 @@ const MenuItem = ({ children, onClick, disabled = false, danger = false }) => {
   );
 };
 
-// =================================================================
-// 🧩 COMPONENT CON: MenuSeparator - Dùng để tạo đường kẻ phân cách
-// =================================================================
 const MenuSeparator = () => (
   <hr
     style={{ margin: "4px 0", border: "none", borderTop: "1px solid #eee" }}
@@ -66,20 +42,55 @@ const MenuSeparator = () => (
 );
 
 // =================================================================
-//  ዋና COMPONENT CHÍNH: CustomContextMenu
+//  COMPONENT CHÍNH: CustomContextMenu (PHIÊN BẢN NÂNG CẤP)
 // =================================================================
 const CustomContextMenu = ({ menuState, onAction, clipboard }) => {
+  const menuRef = useRef(null);
+  const [position, setPosition] = useState({
+    top: 0,
+    left: 0,
+    visibility: "hidden",
+  });
+
+  // 👇 SỬ DỤNG useLayoutEffect ĐỂ TÍNH TOÁN VỊ TRÍ
+  useLayoutEffect(() => {
+    if (menuState.visible && menuRef.current) {
+      const { innerWidth: windowWidth, innerHeight: windowHeight } = window;
+      const { offsetWidth: menuWidth, offsetHeight: menuHeight } =
+        menuRef.current;
+
+      let top = menuState.y;
+      let left = menuState.x;
+
+      // Nếu menu tràn ra dưới -> lật lên trên
+      if (top + menuHeight > windowHeight) {
+        top = menuState.y - menuHeight;
+      }
+
+      // Nếu menu tràn ra phải -> lật sang trái
+      if (left + menuWidth > windowWidth) {
+        left = menuState.x - menuWidth;
+      }
+
+      // Đảm bảo không bị lọt ra ngoài top/left
+      if (top < 0) top = 5;
+      if (left < 0) left = 5;
+
+      setPosition({ top, left, visibility: "visible" });
+    } else {
+      // Ẩn menu khi không hiển thị để tính toán lại ở lần sau
+      setPosition((prev) => ({ ...prev, visibility: "hidden" }));
+    }
+  }, [menuState]); // Chạy lại mỗi khi state của menu thay đổi
+
   if (!menuState.visible) {
     return null;
   }
 
-  const { item: currentItem, x, y } = menuState;
+  const { item: currentItem } = menuState;
 
-  // Định nghĩa style cho container của menu
   const menuContainerStyle = {
     position: "absolute",
-    top: y,
-    left: x,
     background: "white",
     border: "1px solid #ccc",
     borderRadius: "6px",
@@ -87,12 +98,16 @@ const CustomContextMenu = ({ menuState, onAction, clipboard }) => {
     padding: "6px 0",
     minWidth: "220px",
     zIndex: 10000,
+    // 👇 Áp dụng vị trí đã tính toán và thuộc tính visibility
+    top: `${position.top}px`,
+    left: `${position.left}px`,
+    visibility: position.visibility,
   };
 
   return (
-    <div style={menuContainerStyle}>
+    <div ref={menuRef} style={menuContainerStyle}>
+      {/* Phần logic hiển thị các MenuItem giữ nguyên không thay đổi */}
       <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-        {/* === Các hành động khi có item được chọn === */}
         {currentItem && (
           <>
             {currentItem.type === "file" && (
@@ -103,36 +118,25 @@ const CustomContextMenu = ({ menuState, onAction, clipboard }) => {
             <MenuItem onClick={() => onAction("rename", currentItem)}>
               Đổi tên...
             </MenuItem>
-
             <MenuSeparator />
-
             <MenuItem onClick={() => onAction("copy", currentItem)}>
               Sao chép
-            </MenuItem>
-            <MenuItem onClick={() => onAction("cut", currentItem)}>
-              Cắt
             </MenuItem>
             <MenuItem onClick={() => onAction("move", currentItem)}>
               Di chuyển đến...
             </MenuItem>
           </>
         )}
-
-        {/* === Các hành động chung === */}
         <MenuItem
           onClick={() => onAction("paste", currentItem)}
           disabled={!clipboard}>
           Dán
         </MenuItem>
-
-        {/* === Các hành động khi không có item === */}
         {!currentItem && (
           <MenuItem onClick={() => onAction("new_folder", null)}>
             Tạo thư mục mới
           </MenuItem>
         )}
-
-        {/* === Các hành động phá hủy (nguy hiểm) === */}
         {currentItem && (
           <>
             <MenuSeparator />

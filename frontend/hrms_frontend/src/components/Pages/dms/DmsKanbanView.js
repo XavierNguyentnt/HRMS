@@ -32,26 +32,8 @@ const DirectoryCard = ({
 }) => {
   const itemData = { ...dir, type: "directory" };
   const [isExternalDragOver, setIsExternalDragOver] = useState(false);
-  // const [, setExternalDragData] = useState(null);
-  // const [isCtrlPressed, setIsCtrlPressed] = useState(false);
 
-  // useEffect(() => {
-  //   const handleKeyDown = (e) => {
-  //     if (e.key === "Control") setIsCtrlPressed(true);
-  //   };
-  //   const handleKeyUp = (e) => {
-  //     if (e.key === "Control") setIsCtrlPressed(false);
-  //   };
-
-  //   window.addEventListener("keydown", handleKeyDown);
-  //   window.addEventListener("keyup", handleKeyUp);
-
-  //   return () => {
-  //     window.removeEventListener("keydown", handleKeyDown);
-  //     window.removeEventListener("keyup", handleKeyUp);
-  //   };
-  // }, []);
-
+  // Hàm kiểm tra xem các item được kéo có thể thả vào thư mục này không
   const canDropItem = (draggedItems) => {
     if (!draggedItems?.length) return false;
     return draggedItems.every((it) => {
@@ -174,24 +156,6 @@ const FileCard = ({
   externalDragData,
 }) => {
   const itemData = { ...doc, type: "file" };
-  // const [isCtrlPressed, setIsCtrlPressed] = useState(false);
-
-  // useEffect(() => {
-  //   const handleKeyDown = (e) => {
-  //     if (e.key === "Control") setIsCtrlPressed(true);
-  //   };
-  //   const handleKeyUp = (e) => {
-  //     if (e.key === "Control") setIsCtrlPressed(false);
-  //   };
-
-  //   window.addEventListener("keydown", handleKeyDown);
-  //   window.addEventListener("keyup", handleKeyUp);
-
-  //   return () => {
-  //     window.removeEventListener("keydown", handleKeyDown);
-  //     window.removeEventListener("keyup", handleKeyUp);
-  //   };
-  // }, []);
 
   const [{ isDragging }, drag] = useDrag(
     () => ({
@@ -304,7 +268,6 @@ const DmsKanbanView = ({
       onMoveItem(items, currentDirId);
     }
     setIsContainerDragOver(false);
-    broadcastDragEnd();
   };
 
   // Style động cho container để tạo hiệu ứng
@@ -371,8 +334,8 @@ const DmsKanbanView = ({
       </div>
 
       <hr />
-
-      <div className="mt-4">
+      {/*TUỲ CHỌN: HIỂN THỊ TẤT CẢ TỆP TIN TRONG MỘT THƯ MỤC CHA */}
+      {/* <div className="mt-4">
         <h5 className="fw-bold text-muted mb-3">Tất cả Tệp tin</h5>
         {allItems?.length > 0 ? (
           <div className="d-flex flex-wrap gap-3">
@@ -397,7 +360,7 @@ const DmsKanbanView = ({
             Không có tệp tin nào trong thư mục này.
           </p>
         )}
-      </div>
+      </div> */}
     </div>
   );
 };

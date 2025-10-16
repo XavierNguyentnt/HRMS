@@ -9,7 +9,10 @@ import {
 } from "lucide-react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { broadcastRefresh } from "../../../services/dndChannel";
+import {
+  broadcastRefresh,
+  listenForDndMessages,
+} from "../../../services/dndChannel";
 
 import DmsToolbar from "./DmsToolbar";
 import DmsListView from "./DmsListView";
@@ -29,6 +32,7 @@ import {
   renameItem,
   deleteItem,
   createDirectory,
+  checkExistingFiles,
 } from "../../../services/api/dmsAPI";
 
 import { useDocuments } from "../../hooks/useDocuments";
@@ -53,34 +57,34 @@ const DocumentsPage = () => {
   });
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [itemsToMove, setItemsToMove] = useState([]);
-  // trong DocumentsPage component
   const [isCtrlPressed, setIsCtrlPressed] = useState(false);
 
   // lắng nghe Ctrl global (để truyền xuống File/Directory cards)
   useEffect(() => {
-    const down = (e) => {
+    const handleKeyDown = (e) => {
       if (e.key === "Control") setIsCtrlPressed(true);
     };
-    const up = (e) => {
+    const handleKeyUp = (e) => {
       if (e.key === "Control") setIsCtrlPressed(false);
     };
-    window.addEventListener("keydown", down);
-    window.addEventListener("keyup", up);
+
+    const handleBlur = () => {
+      setIsCtrlPressed(false);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("blur", handleBlur);
+
     return () => {
-      window.removeEventListener("keydown", down);
-      window.removeEventListener("keyup", up);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("blur", handleBlur);
     };
   }, []);
 
-  // lắng nghe thông điệp từ BroadcastChannel (REFRESH)
+  // Lắng nghe thông điệp từ BroadcastChannel (REFRESH)
   useEffect(() => {
-    const listenForDndMessages = (callback) => {
-      const channel = new BroadcastChannel("kdpd_dms_dnd");
-      const handler = (event) => callback(event.data);
-      channel.addEventListener("message", handler);
-      return () => channel.removeEventListener("message", handler);
-    };
-
     const cleanup = listenForDndMessages((msg) => {
       if (msg?.type === "REFRESH") {
         refresh();
@@ -170,33 +174,68 @@ const DocumentsPage = () => {
     }
   };
 
-  // ✅ Di chuyển & Sao chép
-  const handleMoveItems = async (items, targetDirId) => {
+  // Hàm helper xử lý logic chung cho cả Move và Copy
+  const processDropAction = async (actionFn, items, targetDirId) => {
     try {
-      for (const item of items) {
-        const model = item.type === "directory" ? "dms.directory" : "dms.file";
-        await moveItem(model, item.id, targetDirId);
+      // Tách riêng thư mục và tệp tin, vì chỉ cần kiểm tra xung đột tên tệp tin
+      const directories = items.filter((it) => it.type === "directory");
+      const files = items.filter((it) => it.type === "file");
+      const fileNames = files.map((f) => f.name);
+
+      let filesToProcess = files; // Mặc định xử lý tất cả tệp
+
+      // Chỉ thực hiện kiểm tra nếu có tệp tin được kéo/thả
+      if (fileNames.length > 0) {
+        const existingNames = await checkExistingFiles(targetDirId, fileNames);
+
+        if (existingNames.length > 0) {
+          // Lọc ra những tệp bị xung đột
+          const nonConflictingFiles = files.filter(
+            (f) => !existingNames.includes(f.name)
+          );
+
+          const message = `Các tệp sau đã tồn tại trong thư mục đích:\n\n- ${existingNames.join(
+            "\n- "
+          )}\n\nBạn có muốn giữ cả hai không? (Tệp mới sẽ được tự động đổi tên)`;
+
+          if (window.confirm(message)) {
+            // Nếu người dùng đồng ý, chúng ta vẫn xử lý tất cả
+            filesToProcess = files;
+          } else {
+            // Nếu không, chỉ xử lý những tệp không bị xung đột
+            filesToProcess = nonConflictingFiles;
+          }
+        }
       }
+
+      // Tổng hợp lại danh sách cuối cùng cần xử lý
+      const finalItemsToProcess = [...directories, ...filesToProcess];
+
+      if (finalItemsToProcess.length === 0) return;
+
+      for (const item of finalItemsToProcess) {
+        const model = item.type === "directory" ? "dms.directory" : "dms.file";
+        await actionFn(model, item.id, targetDirId);
+      }
+
       await refresh();
-      broadcastRefresh(); // thông báo các cửa sổ khác refresh
+      broadcastRefresh();
     } catch (err) {
-      alert("Không thể di chuyển một hoặc nhiều mục!");
+      const actionName = actionFn.name.includes("copy")
+        ? "sao chép"
+        : "di chuyển";
+      alert(`Lỗi: Không thể ${actionName} một hoặc nhiều mục.`);
       console.error(err);
     }
   };
 
+  // ✅ Di chuyển & Sao chép
+  const handleMoveItems = async (items, targetDirId) => {
+    await processDropAction(moveItem, items, targetDirId);
+  };
+
   const handleCopyItems = async (items, targetDirId) => {
-    try {
-      for (const item of items) {
-        const model = item.type === "directory" ? "dms.directory" : "dms.file";
-        await copyItem(model, item.id, targetDirId);
-      }
-      await refresh();
-      broadcastRefresh(); // thông báo các cửa sổ khác refresh
-    } catch (err) {
-      alert("Không thể sao chép một hoặc nhiều mục!");
-      console.error(err);
-    }
+    await processDropAction(copyItem, items, targetDirId);
   };
   const handleConfirmMove = (destinationDirId) => {
     handleMoveItems(itemsToMove, destinationDirId);

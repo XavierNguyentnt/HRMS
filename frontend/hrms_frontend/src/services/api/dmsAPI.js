@@ -512,3 +512,36 @@ export const fetchSubFolders = async (parentId = false) => {
     return [];
   }
 };
+
+/**
+ * Kiểm tra sự tồn tại của các tên file trong một thư mục đích.
+ * @param {number|false} directoryId ID của thư mục đích.
+ * @param {string[]} names Danh sách các tên file cần kiểm tra.
+ * @returns {Promise<string[]>} Một mảng chứa các tên file đã tồn tại.
+ */
+export const checkExistingFiles = async (directoryId, names) => {
+  if (!names || names.length === 0) {
+    return [];
+  }
+  const domain = [
+    ["directory_id", "=", directoryId],
+    ["name", "in", names],
+  ];
+  const params = {
+    model: "dms.file",
+    method: "search_read",
+    args: [domain],
+    kwargs: { fields: ["name"] },
+  };
+  try {
+    const response = await axiosInstance.post(URL.RPC_CALL, {
+      jsonrpc: "2.0",
+      params,
+    });
+    if (response.data.error) throw new Error(response.data.error.data.message);
+    return (response.data.result || []).map((file) => file.name);
+  } catch (error) {
+    console.error("❌ Lỗi khi kiểm tra file tồn tại:", error);
+    throw error;
+  }
+};
