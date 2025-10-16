@@ -335,6 +335,7 @@ export const fetchImmediateFiles = async (directoryId) => {
       fields: [
         "id",
         "name",
+        "directory_id",
         "human_size",
         "path_names",
         "icon_url",

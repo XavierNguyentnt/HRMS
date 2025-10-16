@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Button, Spinner } from "react-bootstrap";
 import {
   Upload,
@@ -58,6 +58,10 @@ const DocumentsPage = () => {
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [itemsToMove, setItemsToMove] = useState([]);
   const [isCtrlPressed, setIsCtrlPressed] = useState(false);
+  const windowId = useMemo(
+    () => Math.random().toString(36).substring(2, 9),
+    []
+  );
 
   // lắng nghe Ctrl global (để truyền xuống File/Directory cards)
   useEffect(() => {
@@ -413,6 +417,7 @@ const DocumentsPage = () => {
                   onMoveItem={handleMoveItems}
                   onCopyItem={handleCopyItems}
                   isCtrlPressed={isCtrlPressed}
+                  windowId={windowId}
                   currentDirId={filters.selectedDir?.id || false}
                 />
               </div>

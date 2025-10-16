@@ -29,11 +29,11 @@ const DirectoryCard = ({
   onMoveItem,
   externalDragData,
   isCtrlPressed,
+  windowId,
 }) => {
   const itemData = { ...dir, type: "directory" };
   const [isExternalDragOver, setIsExternalDragOver] = useState(false);
 
-  // Hàm kiểm tra xem các item được kéo có thể thả vào thư mục này không
   const canDropItem = (draggedItems) => {
     if (!draggedItems?.length) return false;
     return draggedItems.every((it) => {
@@ -50,34 +50,31 @@ const DirectoryCard = ({
       item: () => {
         const dragItems = makeDragItem(itemData, selectedItems);
         const action = isCtrlPressed ? "copy" : "move";
-        broadcastDragStart(dragItems, action);
+        broadcastDragStart(dragItems, action, windowId);
         return { items: dragItems, action };
       },
       end: broadcastDragEnd,
       collect: (monitor) => ({ isDragging: !!monitor.isDragging() }),
     }),
-    [selectedItems, isCtrlPressed]
+    [selectedItems, isCtrlPressed, windowId, itemData]
   );
 
-  const [{ isOver, canDrop }, drop] = useDrop(() => ({
-    accept: ItemTypes.DMS_ITEM,
-    drop: (data) => {
-      const { items, action } = data;
-      if (!items || items.length === 0) return;
-
-      // Kiểm tra action từ payload và gọi hàm tương ứng
-      if (action === "copy") {
-        onCopyItem(items, dir.id);
-      } else {
-        onMoveItem(items, dir.id);
-      }
-    },
-    canDrop: (data) => canDropItem(data.items),
-    collect: (monitor) => ({
-      isOver: !!monitor.isOver(),
-      canDrop: !!monitor.canDrop(),
+  const [{ isOver, canDrop }, drop] = useDrop(
+    () => ({
+      accept: ItemTypes.DMS_ITEM,
+      drop: (data) => {
+        const { items, action } = data;
+        if (action === "copy") onCopyItem(items, dir.id);
+        else onMoveItem(items, dir.id);
+      },
+      canDrop: (data) => canDropItem(data.items),
+      collect: (monitor) => ({
+        isOver: monitor.isOver(),
+        canDrop: monitor.canDrop(),
+      }),
     }),
-  }));
+    [onCopyItem, onMoveItem, dir]
+  );
 
   const handleDragOver = (e) => {
     if (externalDragData && canDropItem(externalDragData.items)) {
@@ -87,61 +84,58 @@ const DirectoryCard = ({
     }
   };
 
-  const handleDragLeave = () => setIsExternalDragOver(false);
+  const handleDragLeave = (e) => {
+    e.stopPropagation();
+    setIsExternalDragOver(false);
+  };
 
   const handleDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!externalDragData?.items?.length) return;
-    if (!canDropItem(externalDragData.items)) return; // Thêm kiểm tra an toàn
-
-    const { items, action } = externalDragData;
-    if (action === "copy") {
-      onCopyItem(items, dir.id);
-    } else {
-      onMoveItem(items, dir.id);
+    if (externalDragData && canDropItem(externalDragData.items)) {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsExternalDragOver(false);
+      const { items, action } = externalDragData;
+      if (action === "copy") onCopyItem(items, dir.id);
+      else onMoveItem(items, dir.id);
     }
   };
 
-  const isDropTarget =
-    (isOver && canDrop) ||
-    (isExternalDragOver && canDropItem(externalDragData?.items));
+  const isDropTarget = (isOver && canDrop) || isExternalDragOver;
 
   return (
-    <div
-      ref={drag}
-      style={{ opacity: isDragging ? 0.5 : 1 }}
+    <Card
+      ref={(node) => drag(drop(node))}
+      className={`p-3 shadow-sm d-flex flex-column justify-content-center align-items-center ${
+        isSelected ? "border-primary" : ""
+      } ${isDropTarget ? "bg-light-success" : ""}`}
+      style={{
+        opacity: isDragging ? 0.5 : 1,
+        width: 220,
+        height: 180,
+        cursor: "pointer",
+        borderRadius: 12,
+        border: isSelected
+          ? "2px solid var(--bs-primary)"
+          : isDropTarget
+          ? "2px dashed var(--bs-primary)" // Hiệu ứng viền đứt khi có thể thả
+          : "2px solid transparent",
+        transition: "all 0.2s ease",
+      }}
+      // Gắn các trình xử lý sự kiện DOM gốc
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      onDragEnter={handleDragOver}>
-      <Card
-        ref={drop}
-        className={`p-3 shadow-sm d-flex flex-column justify-content-center align-items-center ${
-          isSelected ? "border-primary" : ""
-        } ${isDropTarget ? "bg-light-success" : ""}`}
-        style={{
-          width: 220,
-          height: 180,
-          cursor: "pointer",
-          borderRadius: 12,
-          border: isSelected
-            ? "2px solid var(--bs-primary)"
-            : "2px solid transparent",
-          transition: "0.2s ease",
-        }}
-        onClick={(e) => onItemClick(e, itemData)}
-        onDoubleClick={() => onItemDoubleClick(itemData)}
-        onContextMenu={(e) => {
-          e.stopPropagation();
-          onContextMenu(e, itemData);
-        }}>
-        <Folder size={60} strokeWidth={1} className="text-primary mb-2" />
-        <div className="fw-semibold text-truncate text-center w-100">
-          {dir.name}
-        </div>
-      </Card>
-    </div>
+      onClick={(e) => onItemClick(e, itemData)}
+      onDoubleClick={() => onItemDoubleClick(itemData)}
+      onContextMenu={(e) => {
+        e.stopPropagation();
+        onContextMenu(e, itemData);
+      }}>
+      <Folder size={60} strokeWidth={1} className="text-primary mb-2" />
+      <div className="fw-semibold text-truncate text-center w-100">
+        {dir.name}
+      </div>
+    </Card>
   );
 };
 
@@ -154,24 +148,23 @@ const FileCard = ({
   selectedItems,
   isCtrlPressed,
   externalDragData,
+  windowId,
 }) => {
   const itemData = { ...doc, type: "file" };
 
   const [{ isDragging }, drag] = useDrag(
     () => ({
-      type: ItemTypes.DMS_ITEM,
+      type: "dms_item", //type: ItemTypes.DMS_ITEM,
       item: () => {
-        const dragItems = makeDragItem(itemData, selectedItems);
+        const dragItems = makeDragItem({ ...doc, type: "file" }, selectedItems);
         const action = isCtrlPressed ? "copy" : "move";
-        // gửi qua BroadcastChannel với action
-        broadcastDragStart(dragItems, action);
-        // trả về payload để react-dnd trong cùng cửa sổ xử lý
+        broadcastDragStart(dragItems, action, windowId); // 👈 Gửi kèm windowId
         return { items: dragItems, action };
       },
       end: broadcastDragEnd,
       collect: (monitor) => ({ isDragging: !!monitor.isDragging() }),
     }),
-    [selectedItems, isCtrlPressed]
+    [selectedItems, isCtrlPressed, windowId]
   );
 
   const baseUrl =
@@ -221,22 +214,25 @@ const DmsKanbanView = ({
   onCopyItem,
   isCtrlPressed,
   currentDirId,
+  windowId,
 }) => {
   const [externalDragData, setExternalDragData] = useState(null);
-  const [isContainerDragOver, setIsContainerDragOver] = useState(false);
 
   useEffect(() => {
     const cleanup = listenForDndMessages((msg) => {
-      if (msg.type === "DRAG_START") setExternalDragData(msg.payload);
-      else if (msg.type === "DRAG_END") setExternalDragData(null);
+      if (msg.type === "DRAG_START") {
+        if (msg.payload.sourceWindowId !== windowId) {
+          setExternalDragData(msg.payload);
+        }
+      } else if (msg.type === "DRAG_END") {
+        setExternalDragData(null);
+      }
     });
     return cleanup;
-  }, []);
+  }, [windowId]);
 
-  // 👇 HÀM HELPER KIỂM TRA THẢ VÀO VÙNG TRỐNG
   const canDropIntoCurrentFolder = (draggedItems) => {
     if (!draggedItems?.length) return false;
-    // Một item không thể được thả vào thư mục mà nó đã ở sẵn
     return draggedItems.every((it) => {
       const parentId =
         it.type === "directory" ? it.parent_id?.[0] : it.directory_id?.[0];
@@ -244,50 +240,65 @@ const DmsKanbanView = ({
     });
   };
 
-  // 👇 CÁC EVENT HANDLER MỚI CHO CONTAINER
+  const [{ isOverContainer, canDropContainer }, dropContainer] = useDrop(
+    () => ({
+      accept: ItemTypes.DMS_ITEM,
+      drop: (data) => {
+        // Xử lý khi thả vào vùng trống
+        const { items, action } = data;
+        if (action === "copy") {
+          onCopyItem(items, currentDirId);
+        } else {
+          onMoveItem(items, currentDirId);
+        }
+      },
+      canDrop: (data) => canDropIntoCurrentFolder(data.items),
+      collect: (monitor) => ({
+        isOverContainer: monitor.isOver(),
+        canDropContainer: monitor.canDrop(),
+      }),
+    }),
+    [currentDirId, onMoveItem, onCopyItem]
+  );
+
   const handleContainerDragOver = (e) => {
     if (externalDragData && canDropIntoCurrentFolder(externalDragData.items)) {
       e.preventDefault();
-      setIsContainerDragOver(true);
     }
-  };
-
-  const handleContainerDragLeave = (e) => {
-    setIsContainerDragOver(false);
   };
 
   const handleContainerDrop = (e) => {
     e.preventDefault();
-    if (!externalDragData?.items?.length) return;
-    if (!canDropIntoCurrentFolder(externalDragData.items)) return;
-
-    const { items, action } = externalDragData;
-    if (action === "copy") {
-      onCopyItem(items, currentDirId);
-    } else {
-      onMoveItem(items, currentDirId);
+    if (externalDragData && canDropIntoCurrentFolder(externalDragData.items)) {
+      const { items, action } = externalDragData;
+      if (action === "copy") {
+        onCopyItem(items, currentDirId);
+      } else {
+        onMoveItem(items, currentDirId);
+      }
     }
-    setIsContainerDragOver(false);
   };
 
-  // Style động cho container để tạo hiệu ứng
+  const isContainerDropTarget =
+    (isOverContainer && canDropContainer) ||
+    (externalDragData && canDropIntoCurrentFolder(externalDragData.items));
+
   const containerStyle = {
     padding: "1rem",
     borderRadius: "12px",
-    border: isContainerDragOver
+    border: isContainerDropTarget
       ? "2px dashed var(--bs-primary)"
       : "2px dashed transparent",
     transition: "border 0.2s ease-in-out",
-    minHeight: "400px", // Đảm bảo có không gian để thả
+    minHeight: "400px",
   };
 
   return (
     <div
+      ref={dropContainer}
       style={containerStyle}
       onDragOver={handleContainerDragOver}
-      onDragLeave={handleContainerDragLeave}
-      onDrop={handleContainerDrop}
-      onDragEnter={handleContainerDragOver}>
+      onDrop={handleContainerDrop}>
       <div className="mb-4">
         <h5 className="fw-bold text-muted mb-3">Thư mục và Tệp tin</h5>
         {immediateItems?.length > 0 ? (

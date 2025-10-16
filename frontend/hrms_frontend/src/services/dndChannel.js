@@ -1,8 +1,11 @@
 // src/services/dndChannel.js
 const channel = new BroadcastChannel("kdpd_dms_dnd");
 
-export const broadcastDragStart = (items, action = "move") => {
-  channel.postMessage({ type: "DRAG_START", payload: { items, action } });
+export const broadcastDragStart = (items, action = "move", sourceWindowId) => {
+  channel.postMessage({
+    type: "DRAG_START",
+    payload: { items, action, sourceWindowId },
+  });
 };
 
 export const broadcastDragEnd = () => {
