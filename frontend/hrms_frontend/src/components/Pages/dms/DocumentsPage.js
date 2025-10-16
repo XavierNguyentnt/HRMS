@@ -9,8 +9,8 @@ import {
 } from "lucide-react";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
+import { broadcastRefresh } from "../../../services/dndChannel";
 
-// Components
 import DmsToolbar from "./DmsToolbar";
 import DmsListView from "./DmsListView";
 import DmsKanbanView from "./DmsKanbanView";
@@ -23,7 +23,6 @@ import CustomDragLayer from "./CustomDragLayer";
 import CustomContextMenu from "./CustomContextMenu";
 import DmsMoveModal from "./DmsMoveModal";
 
-// APIs
 import {
   copyItem,
   moveItem,
@@ -32,7 +31,6 @@ import {
   createDirectory,
 } from "../../../services/api/dmsAPI";
 
-// Hooks
 import { useDocuments } from "../../hooks/useDocuments";
 
 const DocumentsPage = () => {
@@ -55,19 +53,59 @@ const DocumentsPage = () => {
   });
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [itemsToMove, setItemsToMove] = useState([]);
-  // 🖱️ Handle chuột phải (hiển thị context menu)
+  // trong DocumentsPage component
+  const [isCtrlPressed, setIsCtrlPressed] = useState(false);
+
+  // lắng nghe Ctrl global (để truyền xuống File/Directory cards)
+  useEffect(() => {
+    const down = (e) => {
+      if (e.key === "Control") setIsCtrlPressed(true);
+    };
+    const up = (e) => {
+      if (e.key === "Control") setIsCtrlPressed(false);
+    };
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    return () => {
+      window.removeEventListener("keydown", down);
+      window.removeEventListener("keyup", up);
+    };
+  }, []);
+
+  // lắng nghe thông điệp từ BroadcastChannel (REFRESH)
+  useEffect(() => {
+    const listenForDndMessages = (callback) => {
+      const channel = new BroadcastChannel("kdpd_dms_dnd");
+      const handler = (event) => callback(event.data);
+      channel.addEventListener("message", handler);
+      return () => channel.removeEventListener("message", handler);
+    };
+
+    const cleanup = listenForDndMessages((msg) => {
+      if (msg?.type === "REFRESH") {
+        refresh();
+      }
+    });
+    return cleanup;
+  }, [refresh]);
+
+  // ✅ Cho phép drop native giữa cửa sổ
+  useEffect(() => {
+    const handleDragOver = (e) => e.preventDefault();
+    const handleDrop = (e) => e.preventDefault();
+    window.addEventListener("dragover", handleDragOver);
+    window.addEventListener("drop", handleDrop);
+    return () => {
+      window.removeEventListener("dragover", handleDragOver);
+      window.removeEventListener("drop", handleDrop);
+    };
+  }, []);
+
+  // ✅ Context menu
   const handleContextMenu = (event, item) => {
     event.preventDefault();
     event.stopPropagation();
-
-    // Lấy vị trí click và cập nhật state để hiển thị menu
-    setMenuState({
-      visible: true,
-      x: event.clientX,
-      y: event.clientY,
-      item: item,
-    });
-
+    setMenuState({ visible: true, x: event.clientX, y: event.clientY, item });
     if (item) {
       const isSelected = selectedItems.some((sel) => sel.id === item.id);
       if (!isSelected) setSelectedItems([item]);
@@ -79,16 +117,11 @@ const DocumentsPage = () => {
   }, []);
 
   useEffect(() => {
-    // Thêm event listener để đóng menu khi click bất cứ đâu
     window.addEventListener("click", closeMenu);
-
-    // Cleanup: gỡ bỏ listener khi component unmount
-    return () => {
-      window.removeEventListener("click", closeMenu);
-    };
+    return () => window.removeEventListener("click", closeMenu);
   }, [closeMenu]);
 
-  // 🖱️ Click chọn item
+  // ✅ Click chọn item
   const handleItemClick = (e, clickedItem) => {
     const { ctrlKey, metaKey } = e;
     const isAlreadySelected = selectedItems.some(
@@ -106,7 +139,7 @@ const DocumentsPage = () => {
     }
   };
 
-  // 🖱️ Double click mở thư mục hoặc file
+  // ✅ Double click mở file / folder
   const handleItemDoubleClick = (item) => {
     if (item.type === "directory") {
       handleSelectDirectory(item, [...breadcrumbPath, item]);
@@ -121,13 +154,13 @@ const DocumentsPage = () => {
     }
   };
 
-  // 🧭 Chọn thư mục
+  // ✅ Chọn thư mục
   const handleSelectDirectory = (dir, path) => {
     setFilters.setSelectedDir(dir);
     setBreadcrumbPath(path || []);
   };
 
-  // 🖱️ Bỏ chọn khi click vùng trống
+  // ✅ Bỏ chọn khi click vùng trống
   const handleContainerClick = (e) => {
     if (
       e.target.classList.contains("documents-page") ||
@@ -137,84 +170,85 @@ const DocumentsPage = () => {
     }
   };
 
+  // ✅ Di chuyển & Sao chép
+  const handleMoveItems = async (items, targetDirId) => {
+    try {
+      for (const item of items) {
+        const model = item.type === "directory" ? "dms.directory" : "dms.file";
+        await moveItem(model, item.id, targetDirId);
+      }
+      await refresh();
+      broadcastRefresh(); // thông báo các cửa sổ khác refresh
+    } catch (err) {
+      alert("Không thể di chuyển một hoặc nhiều mục!");
+      console.error(err);
+    }
+  };
+
+  const handleCopyItems = async (items, targetDirId) => {
+    try {
+      for (const item of items) {
+        const model = item.type === "directory" ? "dms.directory" : "dms.file";
+        await copyItem(model, item.id, targetDirId);
+      }
+      await refresh();
+      broadcastRefresh(); // thông báo các cửa sổ khác refresh
+    } catch (err) {
+      alert("Không thể sao chép một hoặc nhiều mục!");
+      console.error(err);
+    }
+  };
   const handleConfirmMove = (destinationDirId) => {
     handleMoveItems(itemsToMove, destinationDirId);
     setShowMoveModal(false);
   };
 
-  // ✏️ Hành động context menu
+  // ✅ Context menu actions
   const handleItemAction = (actionId, currentItem) => {
     const baseUrl =
       process.env.REACT_APP_ODOO_BASE_URL || "http://localhost:8069";
 
     switch (actionId) {
-      case "new_folder": {
-        setShowNewFolderModal(true);
-        break;
-      }
+      case "new_folder":
+        return setShowNewFolderModal(true);
 
       case "move": {
-        if (!currentItem) return;
-
-        // Nếu item được click nằm trong danh sách đang chọn, di chuyển cả nhóm
-        const isPartOfSelection = selectedItems.some(
-          (sel) => sel.id === currentItem.id
-        );
-        const items =
-          isPartOfSelection && selectedItems.length > 0
-            ? selectedItems
-            : [currentItem];
-
+        const items = selectedItems.includes(currentItem)
+          ? selectedItems
+          : [currentItem];
         setItemsToMove(items);
         setShowMoveModal(true);
         break;
       }
 
-      case "copy": {
-        if (!currentItem) return;
-        setClipboard({ action: "copy", item: currentItem });
-        break;
-      }
+      case "copy":
+        return setClipboard({ action: "copy", item: currentItem });
 
-      case "cut": {
-        if (!currentItem) return;
-        setClipboard({ action: "cut", item: currentItem });
-        break;
-      }
+      case "cut":
+        return setClipboard({ action: "cut", item: currentItem });
+
       case "paste": {
         if (!clipboard) return;
-
         const targetDirId =
           currentItem?.type === "directory"
             ? currentItem.id
-            : filters.selectedDir?.id || false;
-
+            : filters.selectedDir?.id;
         const model =
           clipboard.item.type === "directory" ? "dms.directory" : "dms.file";
-
-        // Kiểm tra hành động trong clipboard
-        const pasteAction =
+        const fn =
           clipboard.action === "copy"
             ? copyItem(model, clipboard.item.id, targetDirId)
             : moveItem(model, clipboard.item.id, targetDirId);
-
-        pasteAction
-          .then(() => {
-            refresh();
-            // Xóa clipboard chỉ khi hành động là 'cut'
-            if (clipboard.action === "cut") {
-              setClipboard(null);
-            } else {
-              // Giữ lại clipboard nếu là copy để có thể paste nhiều lần
-            }
-          })
-          .catch(alert);
+        fn.then(() => {
+          refresh();
+          if (clipboard.action === "cut") setClipboard(null);
+        }).catch(alert);
         break;
       }
 
-      case "delete": {
-        if (!currentItem) return;
+      case "delete":
         if (
+          currentItem &&
           window.confirm(`Bạn có chắc muốn xóa "${currentItem.name}" không?`)
         ) {
           const model =
@@ -222,9 +256,8 @@ const DocumentsPage = () => {
           deleteItem(model, currentItem.id).then(refresh).catch(alert);
         }
         break;
-      }
+
       case "rename": {
-        if (!currentItem) return;
         const newName = window.prompt("Nhập tên mới:", currentItem.name);
         if (newName && newName.trim() && newName !== currentItem.name) {
           const model =
@@ -235,42 +268,25 @@ const DocumentsPage = () => {
         }
         break;
       }
-      case "download": {
+
+      case "download":
         if (currentItem?.type === "file" && currentItem.access_url) {
-          window.open(
-            `${baseUrl}${currentItem.access_url}`,
-            "_blank",
-            "noopener,noreferrer"
-          );
+          window.open(`${baseUrl}${currentItem.access_url}`, "_blank");
         }
         break;
-      }
+
       default:
         break;
     }
   };
 
   const handleCreateFolder = (name) => {
-    createDirectory(name, filters.selectedDir?.id || false)
+    createDirectory(name, filters.selectedDir?.id)
       .then(() => {
         setShowNewFolderModal(false);
         refresh();
       })
       .catch(alert);
-  };
-
-  // 📦 Kéo thả di chuyển file/thư mục
-  const handleMoveItems = async (draggedItems, targetDirId) => {
-    try {
-      for (const item of draggedItems) {
-        const model = item.type === "directory" ? "dms.directory" : "dms.file";
-        await moveItem(model, item.id, targetDirId);
-      }
-      refresh();
-    } catch (err) {
-      alert("Không thể di chuyển một hoặc nhiều mục!");
-      console.error(err);
-    }
   };
 
   return (
@@ -281,7 +297,7 @@ const DocumentsPage = () => {
           onContextMenu={(e) => handleContextMenu(e, null)}
           onClick={handleContainerClick}>
           <div className="flex-grow-1 p-3">
-            {/* === Toolbar Header === */}
+            {/* HEADER */}
             <div className="d-flex justify-content-between align-items-center mb-3">
               <h4 className="fw-bold mb-0">📁 Quản lý tài liệu</h4>
               <div className="d-flex gap-2">
@@ -315,12 +331,11 @@ const DocumentsPage = () => {
               </div>
             </div>
 
-            {/* === Breadcrumbs & Toolbar === */}
+            {/* Breadcrumbs & Toolbar */}
             <DmsBreadcrumbs
               path={breadcrumbPath}
               onNavigate={handleSelectDirectory}
             />
-
             <DmsToolbar
               onSearch={setFilters.setSearchTerm}
               onSortChange={setFilters.setSortConfig}
@@ -329,14 +344,10 @@ const DocumentsPage = () => {
               currentView={viewMode}
             />
 
-            {/* === Nội dung chính === */}
+            {/* CONTENT */}
             {loading ? (
               <div className="text-center py-5">
                 <Spinner animation="border" />
-              </div>
-            ) : immediateItems.length === 0 && allItems.length === 0 ? (
-              <div className="text-center text-muted py-5">
-                Không có tài liệu nào.
               </div>
             ) : viewMode === "list" ? (
               <DmsListView
@@ -350,23 +361,24 @@ const DocumentsPage = () => {
             ) : (
               <div
                 className="kanban-container-wrapper"
-                onContextMenu={(e) => handleContextMenu(e, null)} // Giữ nguyên để xử lý click vùng trống
+                onContextMenu={(e) => handleContextMenu(e, null)}
                 onClick={handleContainerClick}>
                 <DmsKanbanView
                   immediateItems={immediateItems}
                   allItems={allItems}
-                  // 👇 SỬA LẠI DÒNG NÀY
-                  onContextMenu={handleContextMenu} // 👈 Sửa thành như thế này
+                  onContextMenu={handleContextMenu}
                   breadcrumbPath={breadcrumbPath}
                   selectedItems={selectedItems}
                   onItemClick={handleItemClick}
                   onItemDoubleClick={handleItemDoubleClick}
                   onMoveItem={handleMoveItems}
+                  onCopyItem={handleCopyItems}
+                  isCtrlPressed={isCtrlPressed}
                 />
               </div>
             )}
 
-            {/* === Modals === */}
+            {/* Modals */}
             <DmsNewFileModal
               show={showNewFile}
               onHide={() => setShowNewFile(false)}
@@ -399,9 +411,6 @@ const DocumentsPage = () => {
         itemsToMove={itemsToMove}
         onConfirmMove={handleConfirmMove}
       />
-
-      {/* === React-Contexify Menu === */}
-
       <CustomContextMenu
         menuState={menuState}
         onAction={handleItemAction}
