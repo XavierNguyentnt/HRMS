@@ -44,7 +44,17 @@ const MenuSeparator = () => (
 // =================================================================
 //  COMPONENT CHÍNH: CustomContextMenu (PHIÊN BẢN NÂNG CẤP)
 // =================================================================
-const CustomContextMenu = ({ menuState, onAction, clipboard }) => {
+const CustomContextMenu = ({
+  menuState,
+  onAction,
+  clipboard,
+  selectedItemCount,
+}) => {
+  // Vô hiệu hóa "Đổi tên" nếu chọn nhiều hơn 1 mục
+  const isRenameDisabled = selectedItemCount > 1;
+
+  // Vô hiệu hóa "Dán" nếu clipboard rỗng
+  const isPasteDisabled = !clipboard?.items?.length;
   const menuRef = useRef(null);
   const [position, setPosition] = useState({
     top: 0,
@@ -115,8 +125,10 @@ const CustomContextMenu = ({ menuState, onAction, clipboard }) => {
                 Xem chi tiết
               </MenuItem>
             )}
-            <MenuItem onClick={() => onAction("rename", currentItem)}>
-              Đổi tên...
+            <MenuItem
+              disabled={isRenameDisabled}
+              onClick={() => onAction("rename", menuState.item)}>
+              Đổi tên
             </MenuItem>
             <MenuSeparator />
             <MenuItem onClick={() => onAction("copy", currentItem)}>
@@ -128,8 +140,8 @@ const CustomContextMenu = ({ menuState, onAction, clipboard }) => {
           </>
         )}
         <MenuItem
-          onClick={() => onAction("paste", currentItem)}
-          disabled={!clipboard}>
+          disabled={isPasteDisabled}
+          onClick={() => onAction("paste", menuState.item)}>
           Dán
         </MenuItem>
         {!currentItem && (

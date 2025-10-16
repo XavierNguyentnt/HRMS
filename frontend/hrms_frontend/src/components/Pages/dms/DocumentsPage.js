@@ -33,6 +33,8 @@ import {
   deleteItem,
   createDirectory,
   checkExistingFiles,
+  fetchSubDirectories,
+  fetchImmediateFiles,
 } from "../../../services/api/dmsAPI";
 
 import { useDocuments } from "../../hooks/useDocuments";
@@ -113,11 +115,26 @@ const DocumentsPage = () => {
   const handleContextMenu = (event, item) => {
     event.preventDefault();
     event.stopPropagation();
-    setMenuState({ visible: true, x: event.clientX, y: event.clientY, item });
+
     if (item) {
-      const isSelected = selectedItems.some((sel) => sel.id === item.id);
-      if (!isSelected) setSelectedItems([item]);
+      // Kiểm tra xem mục được nhấp chuột phải có nằm trong danh sách đã chọn hay không
+      const isAlreadySelected = selectedItems.some(
+        (sel) => sel.id === item.id && sel.type === item.type
+      );
+
+      // Nếu không, hãy xóa lựa chọn cũ và chỉ chọn mục này
+      if (!isAlreadySelected) {
+        setSelectedItems([item]);
+      }
+      // Ngược lại, nếu nó đã nằm trong vùng chọn, giữ nguyên vùng chọn đó
     }
+
+    setMenuState({
+      visible: true,
+      x: event.clientX,
+      y: event.clientY,
+      item, // item được nhấp chuột phải
+    });
   };
 
   const closeMenu = useCallback(() => {
@@ -247,81 +264,274 @@ const DocumentsPage = () => {
   };
 
   // ✅ Context menu actions
-  const handleItemAction = (actionId, currentItem) => {
-    const baseUrl =
-      process.env.REACT_APP_ODOO_BASE_URL || "http://localhost:8069";
+  const handleItemAction = useCallback(
+    async (actionId, currentItem) => {
+      const baseUrl =
+        process.env.REACT_APP_ODOO_BASE_URL || "http://localhost:8069";
 
-    switch (actionId) {
-      case "new_folder":
-        return setShowNewFolderModal(true);
+      // Nguồn đáng tin cậy cho mọi hành động là `selectedItems`
+      const itemsToAction = selectedItems;
+      // if (itemsToAction.length === 0) return;
 
-      case "move": {
-        const items = selectedItems.includes(currentItem)
-          ? selectedItems
-          : [currentItem];
-        setItemsToMove(items);
-        setShowMoveModal(true);
-        break;
+      switch (actionId) {
+        case "new_folder":
+          return setShowNewFolderModal(true);
+
+        case "move": {
+          setItemsToMove(itemsToAction);
+          setShowMoveModal(true);
+          break;
+        }
+
+        case "copy":
+          // Đưa tất cả các mục đã chọn vào clipboard
+          return setClipboard({ action: "copy", items: itemsToAction });
+
+        case "cut":
+          // Đưa tất cả các mục đã chọn vào clipboard
+          return setClipboard({ action: "cut", items: itemsToAction });
+
+        case "paste": {
+          if (!clipboard?.items?.length) return;
+
+          const targetDirId =
+            currentItem?.type === "directory"
+              ? currentItem.id
+              : filters.selectedDir?.id;
+
+          // Giữ nguyên logic cho "Cắt-Dán" (di chuyển)
+          if (clipboard.action === "cut") {
+            const promises = clipboard.items.map((itemToPaste) => {
+              const model =
+                itemToPaste.type === "directory" ? "dms.directory" : "dms.file";
+              return moveItem(model, itemToPaste.id, targetDirId);
+            });
+            try {
+              await Promise.all(promises);
+              setClipboard(null);
+            } catch (error) {
+              console.error("Lỗi khi di chuyển (cắt-dán):", error);
+              alert("Đã xảy ra lỗi khi di chuyển một hoặc nhiều mục.");
+              return;
+            }
+          }
+
+          // ✅ [SỬA LỖI & NÂNG CẤP] LOGIC MỚI CHO "SAO CHÉP-DÁN"
+          if (clipboard.action === "copy") {
+            try {
+              // 1. Lấy danh sách tên các mục đã có trong thư mục đích
+              const [subDirs, immediateFiles] = await Promise.all([
+                fetchSubDirectories(targetDirId),
+                fetchImmediateFiles(targetDirId),
+              ]);
+              const existingNames = new Set([
+                ...subDirs.map((d) => d.name),
+                ...immediateFiles.map((f) => f.name),
+              ]);
+
+              // 2. [NÂNG CẤP] Hàm helper tìm ra tên gốc và phần mở rộng
+              const getBaseNameAndExtension = (name) => {
+                const dotIndex = name.lastIndexOf(".");
+                const extension =
+                  dotIndex !== -1 ? name.substring(dotIndex) : "";
+                let nameWithoutExt =
+                  dotIndex !== -1 ? name.substring(0, dotIndex) : name;
+
+                // Regex để tìm các hậu tố copy như " (copy)", " (copy 1)", hoặc " (1)"
+                const copyPattern = /\s\((copy|copy \d+|\d+)\)$/;
+                const match = nameWithoutExt.match(copyPattern);
+
+                if (match) {
+                  // Nếu tìm thấy hậu tố, tên gốc là phần đứng trước nó
+                  const baseName = nameWithoutExt
+                    .substring(0, match.index)
+                    .trim();
+                  return { baseName, extension };
+                }
+                // Nếu không, toàn bộ tên (bỏ phần mở rộng) là tên gốc
+                return { baseName: nameWithoutExt, extension };
+              };
+
+              // 3. [NÂNG CẤP] Hàm helper tạo tên duy nhất theo style Google Drive
+              const generateUniqueName = (name) => {
+                const { baseName, extension } = getBaseNameAndExtension(name);
+
+                let counter = 1;
+                while (true) {
+                  const newName = `${baseName} (copy ${counter})${extension}`;
+                  if (!existingNames.has(newName)) {
+                    return newName;
+                  }
+                  counter++;
+                }
+              };
+
+              // 4. Thực hiện tuần tự để chống race condition
+              for (const itemToPaste of clipboard.items) {
+                const model =
+                  itemToPaste.type === "directory"
+                    ? "dms.directory"
+                    : "dms.file";
+
+                let finalName = itemToPaste.name;
+                if (existingNames.has(finalName)) {
+                  finalName = generateUniqueName(finalName);
+                }
+
+                // Bước 4.1: Tạo bản sao, để Odoo tự đặt tên tạm thời
+                const newId = await copyItem(
+                  model,
+                  itemToPaste.id,
+                  targetDirId
+                );
+                if (!newId) {
+                  throw new Error(
+                    `Không thể tạo bản sao cho ${itemToPaste.name}`
+                  );
+                }
+
+                // Bước 4.2: Ngay lập tức đổi tên bản sao đó thành tên chúng ta muốn
+                await renameItem(model, newId, finalName);
+
+                // Bước 4.3: Cập nhật Set để vòng lặp tiếp theo biết tên này đã được sử dụng
+                existingNames.add(finalName);
+              }
+            } catch (error) {
+              console.error("Lỗi khi sao chép (sao chép-dán):", error);
+              // Hiển thị lại thông báo lỗi như trong ảnh
+              alert("Đã xảy ra lỗi khi sao chép một hoặc nhiều mục.");
+              await refresh();
+              broadcastRefresh();
+              return;
+            }
+          }
+
+          // Sau khi hoàn thành, làm mới dữ liệu
+          await refresh();
+          broadcastRefresh();
+          break;
+        }
+
+        case "delete": {
+          const message = `Bạn có chắc muốn xóa vĩnh viễn ${itemsToAction.length} mục đã chọn không?`;
+          if (window.confirm(message)) {
+            const promises = itemsToAction.map((itemToDelete) => {
+              const model =
+                itemToDelete.type === "directory"
+                  ? "dms.directory"
+                  : "dms.file";
+              return deleteItem(model, itemToDelete.id);
+            });
+
+            try {
+              await Promise.all(promises);
+              await refresh();
+              broadcastRefresh();
+              setSelectedItems([]); // Xóa lựa chọn sau khi xóa thành công
+            } catch (error) {
+              console.error("Lỗi khi xóa:", error);
+              alert("Đã xảy ra lỗi khi xóa một hoặc nhiều mục.");
+            }
+          }
+          break;
+        }
+
+        case "rename": {
+          // Đổi tên chỉ cho phép khi chọn một mục duy nhất
+          if (itemsToAction.length !== 1) {
+            return; // Không làm gì nếu chọn nhiều hơn 1
+          }
+          const itemToRename = itemsToAction[0];
+          const newName = window.prompt("Nhập tên mới:", itemToRename.name);
+          if (newName && newName.trim() && newName !== itemToRename.name) {
+            const model =
+              itemToRename.type === "directory" ? "dms.directory" : "dms.file";
+            renameItem(model, itemToRename.id, newName.trim())
+              .then(() => {
+                refresh();
+                broadcastRefresh();
+              })
+              .catch(alert);
+          }
+          break;
+        }
+
+        case "download": {
+          // Lọc ra các tệp tin có thể tải xuống
+          const filesToDownload = itemsToAction.filter(
+            (item) => item.type === "file" && item.access_url
+          );
+
+          if (filesToDownload.length === 0) {
+            alert(
+              "Không có tệp nào hợp lệ để tải xuống trong các mục đã chọn."
+            );
+            return;
+          }
+
+          // Mở tab mới để tải cho mỗi tệp
+          filesToDownload.forEach((file) => {
+            window.open(`${baseUrl}${file.access_url}`, "_blank");
+          });
+          break;
+        }
+        default:
+          break;
+      }
+    },
+    [clipboard, filters.selectedDir, selectedItems, refresh]
+  );
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Bỏ qua nếu người dùng đang gõ trong ô input hoặc textarea
+      const activeElement = document.activeElement;
+      if (
+        activeElement.tagName === "INPUT" ||
+        activeElement.tagName === "TEXTAREA"
+      ) {
+        return;
       }
 
-      case "copy":
-        return setClipboard({ action: "copy", item: currentItem });
-
-      case "cut":
-        return setClipboard({ action: "cut", item: currentItem });
-
-      case "paste": {
-        if (!clipboard) return;
-        const targetDirId =
-          currentItem?.type === "directory"
-            ? currentItem.id
-            : filters.selectedDir?.id;
-        const model =
-          clipboard.item.type === "directory" ? "dms.directory" : "dms.file";
-        const fn =
-          clipboard.action === "copy"
-            ? copyItem(model, clipboard.item.id, targetDirId)
-            : moveItem(model, clipboard.item.id, targetDirId);
-        fn.then(() => {
-          refresh();
-          if (clipboard.action === "cut") setClipboard(null);
-        }).catch(alert);
-        break;
+      // --- Xử lý Ctrl + C (Copy) và Ctrl + X (Cut) ---
+      if (
+        e.ctrlKey &&
+        (e.key.toLowerCase() === "c" || e.key.toLowerCase() === "x")
+      ) {
+        if (selectedItems.length > 0) {
+          e.preventDefault(); // Ngăn hành vi mặc định của trình duyệt
+          const action = e.key.toLowerCase() === "c" ? "copy" : "cut";
+          setClipboard({ action, items: selectedItems });
+          // Tùy chọn: Thêm một thông báo toast nhỏ ở đây để báo đã copy/cut
+        }
       }
 
-      case "delete":
-        if (
-          currentItem &&
-          window.confirm(`Bạn có chắc muốn xóa "${currentItem.name}" không?`)
-        ) {
-          const model =
-            currentItem.type === "directory" ? "dms.directory" : "dms.file";
-          deleteItem(model, currentItem.id).then(refresh).catch(alert);
+      // --- Xử lý Ctrl + V (Paste) ---
+      if (e.ctrlKey && e.key.toLowerCase() === "v") {
+        if (clipboard) {
+          e.preventDefault();
+          // Gọi hàm paste, truyền `null` cho currentItem để nó dán vào thư mục hiện tại
+          handleItemAction("paste", null);
         }
-        break;
-
-      case "rename": {
-        const newName = window.prompt("Nhập tên mới:", currentItem.name);
-        if (newName && newName.trim() && newName !== currentItem.name) {
-          const model =
-            currentItem.type === "directory" ? "dms.directory" : "dms.file";
-          renameItem(model, currentItem.id, newName.trim())
-            .then(refresh)
-            .catch(alert);
-        }
-        break;
       }
 
-      case "download":
-        if (currentItem?.type === "file" && currentItem.access_url) {
-          window.open(`${baseUrl}${currentItem.access_url}`, "_blank");
+      // --- Xử lý Delete và Shift + Delete ---
+      if (e.key === "Delete") {
+        if (selectedItems.length > 0) {
+          e.preventDefault();
+          // Cả Delete và Shift+Delete đều sẽ gọi hành động 'delete'
+          // Logic xác nhận đã có sẵn bên trong handleItemAction
+          handleItemAction("delete");
         }
-        break;
+      }
+    };
 
-      default:
-        break;
-    }
-  };
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [selectedItems, clipboard, handleItemAction]);
 
   const handleCreateFolder = (name) => {
     createDirectory(name, filters.selectedDir?.id)
@@ -460,6 +670,7 @@ const DocumentsPage = () => {
         menuState={menuState}
         onAction={handleItemAction}
         clipboard={clipboard}
+        selectedItemCount={selectedItems.length}
       />
     </>
   );

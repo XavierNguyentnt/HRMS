@@ -386,17 +386,27 @@ export const createDirectory = async (name, parentId = false) => {
 
 /**
  * Sao chép một file hoặc thư mục sang vị trí mới
+ * @returns {Promise<number>} ID của mục mới được tạo.
  */
-export const copyItem = async (model, id, newParentId) => {
+export const copyItem = async (model, id, newParentId, newName) => {
   // Tên trường cần ghi đè: 'directory_id' cho file, 'parent_id' cho thư mục
   const fieldToUpdate = model === "dms.file" ? "directory_id" : "parent_id";
+
+  const defaultValues = {
+    [fieldToUpdate]: newParentId,
+  };
+
+  // Nếu có tên mới được cung cấp, thêm nó vào các giá trị ghi đè
+  if (newName) {
+    defaultValues.name = newName;
+  }
 
   const params = {
     model: model,
     method: "copy", // Sử dụng phương thức 'copy' của Odoo
     args: [
       [id], // ID của bản ghi gốc cần sao chép
-      { [fieldToUpdate]: newParentId }, // Giá trị mới cho thư mục cha
+      defaultValues, // Giá trị mới cho thư mục cha và tên
     ],
     kwargs: {},
   };
@@ -406,7 +416,11 @@ export const copyItem = async (model, id, newParentId) => {
       params,
     });
     if (response.data.error) throw new Error(response.data.error.data.message);
-    return response.data.result;
+    const result = response.data.result;
+    if (Array.isArray(result) && result.length > 0) {
+      return result[0]; // Lấy phần tử đầu tiên
+    }
+    return result; // Trả về kết quả (có thể là một số nguyên)
   } catch (error) {
     console.error(`❌ Lỗi khi sao chép ${model} ID ${id}:`, error);
     throw error;
