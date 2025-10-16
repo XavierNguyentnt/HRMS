@@ -374,6 +374,7 @@ const DocumentsPage = () => {
                   onMoveItem={handleMoveItems}
                   onCopyItem={handleCopyItems}
                   isCtrlPressed={isCtrlPressed}
+                  currentDirId={filters.selectedDir?.id || false}
                 />
               </div>
             )}

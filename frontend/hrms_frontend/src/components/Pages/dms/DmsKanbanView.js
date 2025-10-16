@@ -100,6 +100,7 @@ const DirectoryCard = ({
   const handleDragOver = (e) => {
     if (externalDragData && canDropItem(externalDragData.items)) {
       e.preventDefault();
+      e.stopPropagation();
       setIsExternalDragOver(true);
     }
   };
@@ -108,6 +109,7 @@ const DirectoryCard = ({
 
   const handleDrop = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     if (!externalDragData?.items?.length) return;
     if (!canDropItem(externalDragData.items)) return; // Thêm kiểm tra an toàn
 
@@ -254,8 +256,10 @@ const DmsKanbanView = ({
   onMoveItem,
   onCopyItem,
   isCtrlPressed,
+  currentDirId,
 }) => {
   const [externalDragData, setExternalDragData] = useState(null);
+  const [isContainerDragOver, setIsContainerDragOver] = useState(false);
 
   useEffect(() => {
     const cleanup = listenForDndMessages((msg) => {
@@ -265,8 +269,62 @@ const DmsKanbanView = ({
     return cleanup;
   }, []);
 
+  // 👇 HÀM HELPER KIỂM TRA THẢ VÀO VÙNG TRỐNG
+  const canDropIntoCurrentFolder = (draggedItems) => {
+    if (!draggedItems?.length) return false;
+    // Một item không thể được thả vào thư mục mà nó đã ở sẵn
+    return draggedItems.every((it) => {
+      const parentId =
+        it.type === "directory" ? it.parent_id?.[0] : it.directory_id?.[0];
+      return parentId !== currentDirId;
+    });
+  };
+
+  // 👇 CÁC EVENT HANDLER MỚI CHO CONTAINER
+  const handleContainerDragOver = (e) => {
+    if (externalDragData && canDropIntoCurrentFolder(externalDragData.items)) {
+      e.preventDefault();
+      setIsContainerDragOver(true);
+    }
+  };
+
+  const handleContainerDragLeave = (e) => {
+    setIsContainerDragOver(false);
+  };
+
+  const handleContainerDrop = (e) => {
+    e.preventDefault();
+    if (!externalDragData?.items?.length) return;
+    if (!canDropIntoCurrentFolder(externalDragData.items)) return;
+
+    const { items, action } = externalDragData;
+    if (action === "copy") {
+      onCopyItem(items, currentDirId);
+    } else {
+      onMoveItem(items, currentDirId);
+    }
+    setIsContainerDragOver(false);
+    broadcastDragEnd();
+  };
+
+  // Style động cho container để tạo hiệu ứng
+  const containerStyle = {
+    padding: "1rem",
+    borderRadius: "12px",
+    border: isContainerDragOver
+      ? "2px dashed var(--bs-primary)"
+      : "2px dashed transparent",
+    transition: "border 0.2s ease-in-out",
+    minHeight: "400px", // Đảm bảo có không gian để thả
+  };
+
   return (
-    <div>
+    <div
+      style={containerStyle}
+      onDragOver={handleContainerDragOver}
+      onDragLeave={handleContainerDragLeave}
+      onDrop={handleContainerDrop}
+      onDragEnter={handleContainerDragOver}>
       <div className="mb-4">
         <h5 className="fw-bold text-muted mb-3">Thư mục và Tệp tin</h5>
         {immediateItems?.length > 0 ? (
