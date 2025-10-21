@@ -1,3 +1,4 @@
+#backend\custom_addons\document_flow_ext\models\document_file_ext.py
 from odoo import models, fields
 
 class DmsFileExtension(models.Model):

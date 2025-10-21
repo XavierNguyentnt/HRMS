@@ -27,6 +27,7 @@ import TaskDetailPage from "./components/Pages/Tasks/TaskDetailPage";
 
 //DMS
 import DocumentsPage from "./components/Pages/dms/DocumentsPage";
+import DmsTrashPage from "./components/Pages/dms/DmsTrashPage";
 
 // =================================================================
 // Component Layout chính: Render Header và nội dung các trang con
@@ -111,6 +112,14 @@ function App() {
             element={
               <PrivateRoute>
                 <DocumentsPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="documents/trash"
+            element={
+              <PrivateRoute>
+                <DmsTrashPage />
               </PrivateRoute>
             }
           />

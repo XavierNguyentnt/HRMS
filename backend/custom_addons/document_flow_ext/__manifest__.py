@@ -1,3 +1,4 @@
+#backend\custom_addons\document_flow_ext\__manifest__.py
 {
     "name": "Document Flow Extension",
     "summary": "Luồng xử lý văn bản kế thừa từ DMS",

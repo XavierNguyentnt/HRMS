@@ -2,6 +2,8 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { fetchDirectories } from "../../../services/api/dmsAPI";
 import { FaCaretRight, FaCaretDown } from "react-icons/fa";
+import { Link } from "react-router-dom";
+import { Trash2 } from "lucide-react";
 
 // 👇 1. THÊM ĐỊNH NGHĨA HÀM findPath VÀO ĐÂY
 const findPath = (flatDirectories, dirId) => {
@@ -144,6 +146,12 @@ const DmsDirectoryPanel = ({ onSelectDirectory }) => {
           )}
         </ul>
       </section>
+      <Link
+        to="/documents/trash"
+        className="btn btn-outline-secondary w-100 mt-3">
+        <Trash2 size={16} className="me-2" />
+        Thùng rác
+      </Link>
     </div>
   );
 };

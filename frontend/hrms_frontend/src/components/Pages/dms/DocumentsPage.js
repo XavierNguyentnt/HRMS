@@ -413,7 +413,7 @@ const DocumentsPage = () => {
         }
 
         case "delete": {
-          const message = `Bạn có chắc muốn xóa vĩnh viễn ${itemsToAction.length} mục đã chọn không?`;
+          const message = `Bạn có chắc muốn xóa ${itemsToAction.length} mục đã chọn không?`;
           if (window.confirm(message)) {
             const promises = itemsToAction.map((itemToDelete) => {
               const model =
