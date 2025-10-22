@@ -247,15 +247,12 @@ export const createDocument = async (fileData) => {
  * Lấy các thư mục con trực tiếp của một thư mục cha
  */
 export const fetchSubDirectories = async (parentId) => {
-  if (parentId === null || parentId === undefined) {
-    // Nếu không có parentId (đang ở gốc), lấy các thư mục gốc
-    return fetchDirectories(true); // Thêm một tham số để chỉ lấy danh sách phẳng
-  }
+  const domain = [["parent_id", "=", parentId === null ? false : parentId]];
 
   const params = {
     model: "dms.directory",
     method: "search_read",
-    args: [[["parent_id", "=", parentId]]],
+    args: [domain],
     kwargs: {
       fields: ["id", "name", "complete_name"],
       order: "name asc",
@@ -536,23 +533,47 @@ export const fetchSubFolders = async (parentId = false) => {
 export const fetchTrashedItems = async () => {
   const context = { active_test: false };
   try {
-    const params = {
+    // 🗂️ Lấy file bị xóa
+    const fileParams = {
       model: "dms.file",
       method: "search_read",
       args: [[["active", "=", false]]],
       kwargs: {
-        fields: ["id", "name", "directory_id", "write_date", "create_uid"],
+        fields: ["id", "name", "directory_id", "write_date"],
         context,
       },
     };
-    const response = await axiosInstance.post(URL.RPC_CALL, {
+    const fileRes = await axiosInstance.post(URL.RPC_CALL, {
       jsonrpc: "2.0",
-      params,
+      params: fileParams,
     });
+    if (fileRes.data.error) throw new Error(fileRes.data.error.data.message);
+    const files = (fileRes.data.result || []).map((f) => ({
+      ...f,
+      type: "file",
+    }));
 
-    if (response.data.error) throw new Error(response.data.error.data.message);
+    // 📁 Lấy thư mục bị xóa
+    const dirParams = {
+      model: "dms.directory",
+      method: "search_read",
+      args: [[["active", "=", false]]],
+      kwargs: {
+        fields: ["id", "name", "parent_id", "write_date"],
+        context,
+      },
+    };
+    const dirRes = await axiosInstance.post(URL.RPC_CALL, {
+      jsonrpc: "2.0",
+      params: dirParams,
+    });
+    if (dirRes.data.error) throw new Error(dirRes.data.error.data.message);
+    const dirs = (dirRes.data.result || []).map((d) => ({
+      ...d,
+      type: "directory",
+    }));
 
-    return response.data.result || [];
+    return [...dirs, ...files];
   } catch (error) {
     console.error("❌ Lỗi khi tải thùng rác:", error);
     throw new Error("Không thể tải danh sách thùng rác.");
@@ -605,67 +626,88 @@ export const deleteItem = async (model, id) => {
  * 🔁 Khôi phục các file đã bị xóa mềm
  * Đặt lại active=true và nếu có thể, khôi phục vào thư mục cũ
  */
-export const restoreItems = async (itemIds = []) => {
-  if (!itemIds || itemIds.length === 0)
-    throw new Error("Không có mục nào để khôi phục.");
+export const restoreDocumentsAndDirectories = async (itemIds = []) => {
+  if (itemIds.length === 0) return;
+
+  // Context để khôi phục: cần active_test: false để search/restore item bị xóa
+  const restoreContext = { active_test: false };
 
   try {
     const params = {
-      model: "dms.file",
-      method: "write",
-      args: [itemIds, { active: true }],
-      kwargs: { context: { active_test: false } },
+      model: "dms.file", // Tên model bất kỳ (hoặc dms.file)
+      method: "restore", // ✅ Gọi hàm restore trên model
+      args: [itemIds], // Truyền danh sách ID cần khôi phục
+      kwargs: { context: restoreContext }, // Truyền context
     };
 
-    const response = await axiosInstance.post(URL.RPC_CALL, {
+    const res = await axiosInstance.post(URL.RPC_CALL, {
       jsonrpc: "2.0",
-      params,
+      params: params,
     });
 
-    if (response.data.error) throw new Error(response.data.error.data.message);
-
-    return true;
+    if (res.data.error) {
+      // Dòng này cần được kiểm tra kỹ
+      const errorMessage =
+        res.data.error.data?.message ||
+        res.data.error.message ||
+        "Lỗi không xác định.";
+      // ✅ Cập nhật console log để hiển thị lỗi rõ ràng hơn
+      console.error(`❌ Lỗi khôi phục: ${errorMessage}`);
+      throw new Error(errorMessage);
+    }
+    return res.data.result;
   } catch (error) {
-    console.error("❌ Lỗi khi khôi phục:", error);
-    throw new Error(error.message || "Không thể khôi phục các mục đã chọn.");
+    // ✅ Dòng 644 của bạn: Lỗi khôi phục undefined
+    console.error(`Lỗi khôi phục ${itemIds}: ${error}`);
+    throw error;
   }
 };
 
 /**
- * Xóa vĩnh viễn các mục (file/thư mục)
- * @param {object} groupedItems - { 'dms.file': [1, 2], 'dms.directory': [3] }
+ * Xóa vĩnh viễn các mục đã chọn (file và directory).
+ * @param {object} idsByModel - Object chứa các mảng ID đã nhóm theo model:
+ * { 'dms.file': [ids], 'dms.directory': [ids] }
  */
-export const deletePermanently = async (groupedItems) => {
-  const deletePromises = [];
-  const context = { active_test: false }; // Quan trọng: Phải có context này Odoo mới tìm thấy
+export const deletePermanently = async (idsByModel) => {
+  // (Khoảng dòng 694)
+  // Context để kích hoạt xóa cứng (force_unlink: true)
+  const deleteContext = { active_test: false, force_unlink: true };
+  let errorMessages = [];
 
-  for (const model in groupedItems) {
-    const ids = groupedItems[model];
+  for (const model in idsByModel) {
+    const ids = idsByModel[model];
     if (ids && ids.length > 0) {
-      const params = {
-        model: model,
-        method: "unlink", // Gọi hàm 'unlink' để xóa vĩnh viễn
-        args: [ids],
-        kwargs: { context },
+      const delParams = {
+        model, // dms.file HOẶC dms.directory
+        method: "unlink",
+        args: [ids], // List ID chỉ chứa ID của model tương ứng
+        kwargs: { context: deleteContext },
       };
-      deletePromises.push(
-        axiosInstance.post(URL.RPC_CALL, { jsonrpc: "2.0", params })
-      );
+
+      try {
+        const delRes = await axiosInstance.post(URL.RPC_CALL, {
+          jsonrpc: "2.0",
+          params: delParams,
+        });
+
+        if (delRes.data.error) {
+          throw new Error(delRes.data.error.data.message);
+        }
+      } catch (error) {
+        console.error(`Lỗi khi xóa model ${model}:`, error);
+        errorMessages.push(
+          `Lỗi khi xóa ${model}: ${error.message || "Lỗi không xác định"}`
+        );
+      }
     }
   }
 
-  try {
-    const responses = await Promise.all(deletePromises);
-    // Kiểm tra lỗi
-    for (const response of responses) {
-      if (response.data.error)
-        throw new Error(response.data.error.data.message);
-    }
-    return true;
-  } catch (error) {
-    console.error("❌ Lỗi khi xóa vĩnh viễn:", error);
-    throw new Error(error.message || "Không thể xóa vĩnh viễn các mục.");
+  if (errorMessages.length > 0) {
+    throw new Error(
+      `Đã xảy ra lỗi trong quá trình xóa: \n${errorMessages.join("\n")}`
+    );
   }
+  return true;
 };
 
 /**
@@ -706,48 +748,51 @@ export const checkExistingFiles = async (directoryId, names) => {
  * (Xóa vĩnh viễn các bản ghi active=false)
  */
 export const emptyTrash = async () => {
-  const context = { active_test: false };
+  // ✅ Context cho search_read (chỉ cần active_test=false để thấy các bản ghi đã xóa)
+  const searchContext = { active_test: false };
+  // ✅ Context cho unlink (cần force_unlink=true để xóa cứng)
+  const deleteContext = { active_test: false, force_unlink: true };
+
   try {
-    // 1️⃣ Lấy danh sách các file bị xóa mềm
-    const params = {
-      model: "dms.file",
-      method: "search_read",
-      args: [[["active", "=", false]]],
-      kwargs: { fields: ["id"], context },
-    };
+    const models = ["dms.file", "dms.directory"];
+    for (const model of models) {
+      // Lấy danh sách bị xóa
+      const searchParams = {
+        model,
+        method: "search_read",
+        args: [[["active", "=", false]]],
+        // ⚠️ Dùng searchContext để tránh lỗi 6 arguments
+        kwargs: { fields: ["id"], context: searchContext },
+      };
+      const res = await axiosInstance.post(URL.RPC_CALL, {
+        jsonrpc: "2.0",
+        params: searchParams,
+      });
+      if (res.data.error) throw new Error(res.data.error.data.message);
 
-    const res = await axiosInstance.post(URL.RPC_CALL, {
-      jsonrpc: "2.0",
-      params,
-    });
+      const rawIds = (res.data.result || []).map((r) => r.id);
+      // ✅ FIX: Lọc để chỉ giữ lại các ID là số nguyên dương hợp lệ
+      const ids = rawIds.filter((id) => Number.isInteger(id) && id > 0);
 
-    if (res.data.error) throw new Error(res.data.error.data.message);
-
-    const fileIds = (res.data.result || []).map((f) => f.id);
-    if (fileIds.length === 0) {
-      console.info("🗑️ Thùng rác trống.");
-      return true;
+      if (ids.length > 0) {
+        const delParams = {
+          model,
+          method: "unlink",
+          args: [ids],
+          // ⚠️ Dùng deleteContext để kích hoạt xóa cứng
+          kwargs: { context: deleteContext },
+        };
+        const delRes = await axiosInstance.post(URL.RPC_CALL, {
+          jsonrpc: "2.0",
+          params: delParams,
+        });
+        if (delRes.data.error) throw new Error(delRes.data.error.data.message);
+      }
     }
-
-    // 2️⃣ Xóa thật (unlink)
-    const delParams = {
-      model: "dms.file",
-      method: "unlink",
-      args: [fileIds],
-      kwargs: { context },
-    };
-
-    const delRes = await axiosInstance.post(URL.RPC_CALL, {
-      jsonrpc: "2.0",
-      params: delParams,
-    });
-
-    if (delRes.data.error) throw new Error(delRes.data.error.data.message);
-
-    console.info("✅ Đã dọn sạch thùng rác.");
-    return true;
+    console.log("✅ Đã dọn sạch thùng rác thành công.");
+    return { success: true, message: "Đã dọn sạch thùng rác." };
   } catch (error) {
     console.error("❌ Lỗi khi dọn sạch thùng rác:", error);
-    throw new Error(error.message || "Không thể dọn sạch thùng rác.");
+    throw error;
   }
 };

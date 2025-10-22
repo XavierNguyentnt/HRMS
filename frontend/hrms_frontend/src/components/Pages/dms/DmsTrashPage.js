@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, Trash2, RotateCcw } from "lucide-react";
 import {
   fetchTrashedItems,
-  restoreItems,
+  restoreDocumentsAndDirectories,
   deletePermanently,
   emptyTrash,
 } from "../../../services/api/dmsAPI";
@@ -73,7 +73,7 @@ const DmsTrashPage = () => {
     const id = menuState.item.id;
     if (action === "restore") {
       if (window.confirm("Khôi phục mục này?")) {
-        await restoreItems([id]);
+        await restoreDocumentsAndDirectories([id]);
         loadTrash();
       }
     } else if (action === "delete_permanent") {
@@ -88,22 +88,50 @@ const DmsTrashPage = () => {
   const handleRestore = async () => {
     if (selectedItems.length === 0) return;
     if (window.confirm(`Khôi phục ${selectedItems.length} mục đã chọn?`)) {
-      await restoreItems(selectedItems);
+      await restoreDocumentsAndDirectories(selectedItems);
       loadTrash();
       setSelectedItems([]);
     }
   };
 
   const handleDeletePermanently = async () => {
-    if (selectedItems.length === 0) return;
     if (
       window.confirm(
-        `Hành động này KHÔNG THỂ HOÀN TÁC! Xóa vĩnh viễn ${selectedItems.length} mục?`
+        "Bạn có chắc chắn muốn xóa vĩnh viễn các mục đã chọn? Hành động này không thể hoàn tác."
       )
     ) {
-      await deletePermanently(selectedItems);
-      loadTrash();
-      setSelectedItems([]);
+      setLoading(true);
+      try {
+        // 1. Lọc và nhóm các ID đã chọn theo model type
+        const idsByModel = {
+          "dms.file": [],
+          "dms.directory": [],
+        };
+
+        // Lấy model type từ danh sách đã tải (`trashedItems`)
+        // item.type được xác định trong `fetchTrashedItems`
+        trashedItems
+          .filter((item) => selectedItems.includes(item.id))
+          .forEach((item) => {
+            // item.type là "file" hoặc "directory"
+            const model =
+              item.type === "directory" ? "dms.directory" : "dms.file";
+            idsByModel[model].push(item.id);
+          });
+
+        // 2. Gọi API xóa vĩnh viễn với danh sách ID đã nhóm
+        // Hàm deletePermanently cần được cập nhật để chấp nhận object này
+        await deletePermanently(idsByModel); // <-- Cập nhật cách gọi hàm
+
+        setSelectedItems([]);
+        await loadTrash();
+        alert("Đã xóa vĩnh viễn thành công!");
+      } catch (error) {
+        alert("Lỗi khi xóa vĩnh viễn: " + (error.message || error));
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -189,7 +217,7 @@ const DmsTrashPage = () => {
                   />
                 </td>
                 <td>{item.name}</td>
-                <td>{item.type}</td>
+                <td>{item.type === "directory" ? "📁 Thư mục" : "📄 Tệp"}</td>
                 <td>{new Date(item.deleted_at).toLocaleDateString("vi-VN")}</td>
               </tr>
             ))}

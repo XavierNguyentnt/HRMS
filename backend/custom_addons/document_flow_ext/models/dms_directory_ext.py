@@ -6,12 +6,24 @@ class DmsDirectory(models.Model):
     active = fields.Boolean(default=True)
 
     @api.model
-    def search(self, args, offset=0, limit=None, order=None, count=False):
-        """Ẩn các bản ghi inactive trừ khi context có active_test=False."""
+    # Giữ *extra_args, **kwargs ở đây để bắt các tham số không mong muốn
+    def search(self, args, offset=0, limit=None, order=None, count=False, *extra_args, **kwargs):
+        """
+        Sửa lỗi: Loại bỏ *extra_args khi gọi super().search
+        """
+        # ... code xử lý domain như hiện tại ...
         if not self.env.context.get('active_test', True):
-            return super(DmsDirectory, self).search(args, offset, limit, order, count)
+            # CHỈ truyền 5 tham số tiêu chuẩn và **kwargs
+            return super(DmsDirectory, self).search(
+                args, offset, limit, order, count, **kwargs
+            )
+            
         args = [('active', '=', True)] + (args or [])
-        return super(DmsDirectory, self).search(args, offset, limit, order, count)
+        
+        # CHỈ truyền 5 tham số tiêu chuẩn và **kwargs
+        return super(DmsDirectory, self).search(
+            args, offset, limit, order, count, **kwargs
+        )
 
     def unlink(self):
         """Xoá mềm thư mục (active=False), chỉ xoá thật nếu force_unlink=True."""
