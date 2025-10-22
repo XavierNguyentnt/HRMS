@@ -1,23 +1,23 @@
-#backend\custom_addons\document_flow_ext\__manifest__.py
+# -*- coding: utf-8 -*-
 {
-    "name": "Document Flow Extension",
-    "summary": "Luồng xử lý văn bản kế thừa từ DMS",
-    "version": "18.0.1.0.0",
-    "author": "Your Company",
-    "website": "https://yourcompany.com",
-    "category": "Documents",
-    "license": "LGPL-3",
-    "depends": [
-        "dms", 
-        "mail",
+    'name': 'Document Flow Extension',
+    'version': '1.0.0',
+    'summary': 'Bổ sung tính năng quản lý luồng văn bản',
+    'category': 'Documents',
+    'author': 'Auto-fixed',
+    'website': '',
+    'license': 'LGPL-3',
+    'depends': [
+        'dms',
+        'hr',
     ],
-    "data": [
-        "security/security.xml",
-        "security/ir.model.access.csv",
-        "views/document_views.xml",
-        "views/route_views.xml",
-        "views/menu.xml",
+    'data': [
+        'views/dms_file_view_ext.xml',
+        'views/document_views.xml',
+        'views/menu.xml',
+        'views/route_views.xml',
     ],
-    "installable": True,
-    "application": False,
+    'installable': True,
+    'application': False,
+    'auto_install': False,
 }
