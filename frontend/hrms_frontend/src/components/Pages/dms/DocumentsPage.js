@@ -25,6 +25,7 @@ import DmsNewFolderModal from "./DmsNewFolderModal";
 import CustomDragLayer from "./CustomDragLayer";
 import CustomContextMenu from "./CustomContextMenu";
 import DmsMoveModal from "./DmsMoveModal";
+import DocumentFlowModal from "./DocumentFlowModal";
 
 import {
   copyItem,
@@ -36,6 +37,12 @@ import {
   fetchSubDirectories,
   fetchImmediateFiles,
 } from "../../../services/api/dmsAPI";
+
+import {
+  getDocumentRoutes,
+  advanceDocumentRoute,
+  createDocumentRoute,
+} from "../../../services/api/documentFlowAPI";
 
 import { useDocuments } from "../../hooks/useDocuments";
 
@@ -51,12 +58,16 @@ const DocumentsPage = () => {
   const [breadcrumbPath, setBreadcrumbPath] = useState([]);
   const [clipboard, setClipboard] = useState(null);
   const [selectedItems, setSelectedItems] = useState([]);
+  // Quản lý luồng xử lý văn bản (Document Flow)
+  const [routes, setRoutes] = useState([]);
+  const [loadingRoutes, setLoadingRoutes] = useState(false);
   const [menuState, setMenuState] = useState({
     visible: false,
     x: 0,
     y: 0,
     item: null,
   });
+  const [showDocumentFlowModal, setShowDocumentFlowModal] = useState(false);
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [itemsToMove, setItemsToMove] = useState([]);
   const [isCtrlPressed, setIsCtrlPressed] = useState(false);
@@ -64,6 +75,21 @@ const DocumentsPage = () => {
     () => Math.random().toString(36).substring(2, 9),
     []
   );
+
+  // Lấy danh sách các bước xử lý (routes) của một văn bản
+  const fetchDocumentRoutes = useCallback(async (documentId) => {
+    if (!documentId) return;
+    setLoadingRoutes(true);
+    try {
+      const data = await getDocumentRoutes(documentId);
+      setRoutes(data);
+    } catch (err) {
+      console.error("Lỗi lấy routes:", err);
+      alert("Không thể tải luồng xử lý văn bản.");
+    } finally {
+      setLoadingRoutes(false);
+    }
+  }, []);
 
   // lắng nghe Ctrl global (để truyền xuống File/Directory cards)
   useEffect(() => {
@@ -164,18 +190,43 @@ const DocumentsPage = () => {
     }
   };
 
+  const handleAdvance = async (documentId) => {
+    try {
+      await advanceDocumentRoute(documentId);
+      await fetchDocumentRoutes(documentId);
+      alert("Đã chuyển bước xử lý!");
+    } catch (error) {
+      alert("Không thể chuyển bước xử lý!");
+      console.error(error);
+    }
+  };
+
+  const handleCreateRoute = async (documentId) => {
+    const data = {
+      sequence: routes.length * 10 + 10,
+      from_department_id: 1, // TODO: thay bằng dữ liệu thực
+      to_department_id: 2,
+      assigned_to: 1,
+      action_type: "approve",
+      note: "Thêm bước mới",
+    };
+    try {
+      await createDocumentRoute(documentId, data);
+      await fetchDocumentRoutes(documentId);
+    } catch (error) {
+      alert("Không thể tạo bước mới!");
+    }
+  };
+
   // ✅ Double click mở file / folder
   const handleItemDoubleClick = (item) => {
     if (item.type === "directory") {
       handleSelectDirectory(item, [...breadcrumbPath, item]);
     } else {
-      const baseUrl =
-        process.env.REACT_APP_ODOO_BASE_URL || "http://localhost:8069";
-      window.open(
-        `${baseUrl}${item.access_url}`,
-        "_blank",
-        "noopener,noreferrer"
-      );
+      // Gọi API lấy luồng xử lý của văn bản khi mở
+      fetchDocumentRoutes(item.id);
+      // Mở modal hoặc panel hiển thị chi tiết luồng
+      setShowDocumentFlowModal(true);
     }
   };
 
@@ -671,6 +722,16 @@ const DocumentsPage = () => {
         onAction={handleItemAction}
         clipboard={clipboard}
         selectedItemCount={selectedItems.length}
+      />
+      <DocumentFlowModal
+        show={showDocumentFlowModal}
+        onHide={() => setShowDocumentFlowModal(false)}
+        routes={routes}
+        onAdvance={() => selectedItems[0] && handleAdvance(selectedItems[0].id)}
+        onCreateRoute={() =>
+          selectedItems[0] && handleCreateRoute(selectedItems[0].id)
+        }
+        loading={loadingRoutes}
       />
     </>
   );

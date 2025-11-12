@@ -1,3 +1,4 @@
+#backend\custom_addons\document_flow_ext\models\dms_directory_ext.py
 from odoo import models, fields, api
 
 class DmsDirectory(models.Model):

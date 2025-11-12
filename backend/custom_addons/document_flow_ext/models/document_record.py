@@ -27,3 +27,14 @@ class DocumentRecord(models.Model):
     summary = fields.Text(string="Trích yếu")
 
     route_ids = fields.One2many('document.route', 'document_id', string="Luồng xử lý")
+
+    def action_submit(self):
+        self.status = 'processing'
+
+    def action_sign(self):
+        self.status = 'signed'
+        self.date_signed = fields.Date.today()
+
+    def action_archive(self):
+        self.status = 'archived'
+

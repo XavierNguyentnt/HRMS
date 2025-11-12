@@ -1,0 +1,18 @@
+<odoo>
+  <menuitem id="menu_document_flow_root" name="Luồng văn bản" parent="dms.menu_root"/>
+  <menuitem id="menu_document_flow" name="Văn bản xử lý" parent="menu_document_flow_root" action="action_document_flow"/>
+
+  <record id="view_document_flow_tree" model="ir.ui.view">
+    <field name="name">document.flow.tree</field>
+    <field name="model">dms.file</field>
+    <field name="arch" type="xml">
+      <tree>
+        <field name="name"/>
+        <field name="ref_no"/>
+        <field name="status"/>
+        <field name="department_id"/>
+        <field name="date_received"/>
+      </tree>
+    </field>
+  </record>
+</odoo>
